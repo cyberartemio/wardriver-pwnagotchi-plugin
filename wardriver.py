@@ -33,7 +33,20 @@ class Wardriver(plugins.Plugin):
             os.makedirs(self.__csv_path)
             logging.warning('[WARDRIVER] Created CSV directory')
         
+        if 'wigle' in self.options:
+            self.__wigle_enabled = self.options['wigle']['enabled'] if 'enabled' in self.options['wigle'] else False
+            self.__wigle_api_key = self.options['wigle']['api_key'] if 'api_key' in self.options['wigle'] else None
+            if self.__wigle_enabled and (not self.__wigle_api_key or self.__wigle_api_key == ''):
+                logging.error('[WARDRIVER] Wigle enabled but no api key provided!')
+                self.__wigle_enabled = False
+        else:
+            self.__wigle_enabled = False
+            self.__wigle_api_key = None
+        
         logging.info(f'[WARDRIVER] Saving session files inside {self.__csv_path}')
+        
+        if self.__wigle_enabled:
+            logging.info('[WARDRIVER] Previous sessions will be uploaded to Wigle.net once internet is available')
 
         self.__new_wardriving_session()
     
