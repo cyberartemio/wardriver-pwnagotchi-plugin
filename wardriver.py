@@ -3,12 +3,14 @@ import os
 from datetime import datetime, timezone
 import toml
 import pwnagotchi.plugins as plugins
+from threading import Lock
+import requests
 
 class Wardriver(plugins.Plugin):
     __author__ = 'CyberArtemio'
     __version__ = '1.0'
     __license__ = 'GPL3'
-    __description__ = 'A wardriving plugin for pwnagotchi. Saves all networks seen and uploads data to Wigle.net once internet is available'
+    __description__ = 'A wardriving plugin for pwnagotchi. Saves all networks seen and uploads data to WiGLE once internet is available'
 
     DEFAULT_PATH = '/root/wardriver'
 
@@ -17,6 +19,8 @@ class Wardriver(plugins.Plugin):
     
     def on_loaded(self):
         logging.info('[WARDRIVER] Plugin loaded')
+
+        self.__lock = Lock()
         
         if 'whitelist' in self.options:
             self.__whitelist = self.options['whitelist']
@@ -36,17 +40,19 @@ class Wardriver(plugins.Plugin):
         if 'wigle' in self.options:
             self.__wigle_enabled = self.options['wigle']['enabled'] if 'enabled' in self.options['wigle'] else False
             self.__wigle_api_key = self.options['wigle']['api_key'] if 'api_key' in self.options['wigle'] else None
+            self.__wigle_donate = self.options['wigle']['donate'] if 'donate' in self.options['wigle'] else False
             if self.__wigle_enabled and (not self.__wigle_api_key or self.__wigle_api_key == ''):
                 logging.error('[WARDRIVER] Wigle enabled but no api key provided!')
                 self.__wigle_enabled = False
         else:
             self.__wigle_enabled = False
             self.__wigle_api_key = None
+            self.__wigle_donate = False
         
         logging.info(f'[WARDRIVER] Saving session files inside {self.__csv_path}')
         
         if self.__wigle_enabled:
-            logging.info('[WARDRIVER] Previous sessions will be uploaded to Wigle.net once internet is available')
+            logging.info('[WARDRIVER] Previous sessions will be uploaded to WiGLE once internet is available')
 
         self.__new_wardriving_session()
     
@@ -183,7 +189,7 @@ class Wardriver(plugins.Plugin):
                 'latitude': gps_data["Latitude"],
                 'longitude': gps_data["Longitude"],
                 'altitude': gps_data["Altitude"],
-                'accuracy': 10 # TODO: how can this be calculated?
+                'accuracy': 100 # TODO: how can this be calculated?
             }
 
             filtered_aps = self.__filter_whitelist_aps(aps)
@@ -196,5 +202,45 @@ class Wardriver(plugins.Plugin):
             logging.warning("[WARDRIVER] GPS not available... skip wardriving log")
         
     def on_internet_available(self, agent):
-        # TODO: implement uploading to Wigle.net
-        pass
+        if self.__wigle_enabled and not self.__lock.locked():
+            with self.__lock:
+                sessions_to_upload = [ os.path.join(self.__csv_path, file) for file in os.listdir(self.__csv_path) if os.path.isfile(os.path.join(self.__csv_path, file)) and file.endswith(".csv") and file != os.path.basename(self.__session_file) and not 'uploaded' in file ]
+                if len(sessions_to_upload) > 0:
+                    logging.info(f'[WARDRIVER] Uploading previous sessions on WiGLE ({len(sessions_to_upload)} sessions) - current session will not be uploaded')
+                    headers = {
+                        'Authorization': f'Basic {self.__wigle_api_key}',
+                        'Accept': 'application/json'
+                    }
+                    for file in sessions_to_upload:
+                        try:
+                            with open(file, 'r') as session_file:
+                                session_data = session_file.read()
+                        except Exception as e:
+                            logging.error(f'[WARDRIVER] Failed reading file {file}: {e}')
+                            continue
+
+                        data = {
+                            'donate': 'on' if self.__wigle_donate else 'off'
+                        }
+
+                        file_form = {
+                            'file': (os.path.basename(file), session_data)
+                        }
+
+                        try:
+                            response = requests.post(
+                                url = 'https://api.wigle.net/api/v2/file/upload',
+                                headers = headers,
+                                data = data,
+                                files = file_form,
+                                timeout = 300
+                            )
+                            response.raise_for_status()
+                            try:
+                                os.rename(file, file.replace('.csv', '_uploaded.csv'))
+                                logging.info(f'[WARDRIVER] Uploaded successfully {file} on WiGLE')
+                            except Exception as e:
+                                logging.critical(f'[WARDRIVER] Error while marking {file} as uploaded {e}')
+                        except Exception as e:
+                            logging.error(f'[WARDRIVER] Failed uploading file {file}: {e}')
+                            continue
