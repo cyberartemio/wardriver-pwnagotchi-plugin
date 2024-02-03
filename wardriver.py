@@ -177,7 +177,6 @@ class Wardriver(plugins.Plugin):
         info = agent.session()
         gps_data = info["gps"]
 
-        # TODO: skip when in MANU mode?
         if not self.ready: # it is ready once the session file has been initialized with pre-header and header
             logging.error('[WARDRIVER] Plugin not ready... skip wardriving log')
 
