@@ -147,13 +147,7 @@ class Wardriver(plugins.Plugin):
             capabilities = f'{capabilities}[{ap["cipher"]}]'
         if ap['authentication'] != '':
             capabilities = f'{capabilities}[{ap["authentication"]}]'
-        if ":" == ap['first_seen'][-3:-2]:
-            ap['first_seen'] = ap['first_seen'][:-3] + ap['first_seen'][-2:] # Fix timezone parsing issue (see https://stackoverflow.com/questions/30999230/how-to-parse-timezone-with-colon)
-            # Remove nanoseconds
-            date_parts = ap['first_seen'].split('.')
-            time_parts = date_parts[1].split('+')
-            ap['first_seen'] = date_parts[0] + '+' + time_parts[1]
-        first_timestamp_seen = datetime.strptime(ap['first_seen'], '%Y-%m-%dT%H:%M:%S%z').astimezone(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+        first_timestamp_seen = datetime.now().astimezone(timezone.utc).strftime('%Y-%m-%d %H:%M:%S') # Use now() instead of bettercap firstSeen
         channel = ap['channel']
         rssi = ap['rssi']
         latitude = coordinates['latitude']
