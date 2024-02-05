@@ -182,7 +182,7 @@ class Wardriver(plugins.Plugin):
                 'latitude': gps_data["Latitude"],
                 'longitude': gps_data["Longitude"],
                 'altitude': gps_data["Altitude"],
-                'accuracy': 100 # TODO: how can this be calculated?
+                'accuracy': 50 # TODO: how can this be calculated?
             }
 
             filtered_aps = self.__filter_whitelist_aps(aps)
