@@ -24,7 +24,6 @@ class Wardriver(plugins.Plugin):
         
         if 'whitelist' in self.options:
             self.__whitelist = self.options['whitelist']
-            logging.info(f'[WARDRIVER] Ignoring {len(self.__whitelist)} networks')
         else:
             self.__whitelist = []
         
@@ -55,6 +54,9 @@ class Wardriver(plugins.Plugin):
             logging.info('[WARDRIVER] Previous sessions will be uploaded to WiGLE once internet is available')
 
         self.__new_wardriving_session()
+
+        if len(self.__whitelist) > 0:
+            logging.info(f'[WARDRIVER] Ignoring {len(self.__whitelist)} networks')
     
     def __wigle_info(self):
         '''
@@ -62,6 +64,13 @@ class Wardriver(plugins.Plugin):
         '''
         with open('/etc/pwnagotchi/config.toml', 'r') as config_file:
             data = toml.load(config_file)
+            
+            # Whitelist global SSIDs
+            for ssid in data['main']['whitelist']:
+                if ssid not in self.__whitelist:
+                    self.__whitelist.append(ssid)
+            
+            # Preheader formatting
             file_format = 'WigleWifi-1.4'
             app_release = self.__version__
             # Device model

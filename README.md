@@ -29,19 +29,20 @@ wget https://raw.githubusercontent.com/cyberartemio/wardriver-pwnagotchi-plugin/
 ```toml
 # Enable the plugin
 main.plugins.wardriver.enabled = true
-# Networks whitelist aka don't log these networks
-main.plugins.wardriver.whitelist = [
-    "network-1",
-    "network-2"
-]
 # Directory where CSV files will be stored
 main.plugins.wardriver.csv_path = "/root/wardriver"
 # Enable WiGLE file uploading
 main.plugins.wardriver.wigle.enabled = true
-# WiGLE API key
+# WiGLE API key (encoded)
 main.plugins.wardriver.wigle.api_key = "xyz..."
 # Enable commercial use of your reported data
 main.plugins.wardriver.wigle.donate = false
+# OPTIONAL: networks whitelist aka don't log these networks
+main.plugins.wardriver.whitelist = [
+    "network-1",
+    "network-2"
+]
+# NOTE: SSIDs in main.whitelist will always be ignored
 ```
 6. Restart daemon service:
 ```sh
@@ -61,6 +62,8 @@ Everytime bettercap refresh the access points list (normally every 2 minutes mor
 The CSV file format used is compatible with WiGLE and in the pre-header of the file are logged the informations about your device.
 
 If you don't want some networks to be logged, you can add the SSID inside `whitelist` array in the config. Wardriver does not report networks whose SSID is contained within the whitelist.
+
+**Note:** the SSIDs inside the `main.whitelist` array will always be ignored.
 
 ### 🌐 WiGLE automatic upload
 
