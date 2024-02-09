@@ -31,6 +31,11 @@ wget https://raw.githubusercontent.com/cyberartemio/wardriver-pwnagotchi-plugin/
 main.plugins.wardriver.enabled = true
 # Directory where CSV files will be stored
 main.plugins.wardriver.csv_path = "/root/wardriver"
+# Enable UI status text
+main.plugins.wardriver.ui.enabled = true
+# Position of UI status text
+main.plugins.wardriver.ui.position.x = 5
+main.plugins.wardriver.ui.position.y = 95
 # Enable WiGLE file uploading
 main.plugins.wardriver.wigle.enabled = true
 # WiGLE API key (encoded)
@@ -57,7 +62,7 @@ Done! Now the plugin is installed and is working.
 
 ### 🚗 Wardriving
 
-Everytime bettercap refresh the access points list (normally every 2 minutes more or less), the plugin will log the new networks seen along with the latitude, longitude and altitude. Everytime the service is restarted a new session file will be created.
+Everytime bettercap refresh the access points list (normally every 2 minutes more or less), the plugin will log the new networks seen along with the latitude, longitude and altitude. Everytime the service is restarted a new session file will be created. If you have enabled it, the plugin will display the total number of networks of the current session on the pwnagotchi display.
 
 The CSV file format used is compatible with WiGLE and in the pre-header of the file are logged the informations about your device.
 
