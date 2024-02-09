@@ -35,6 +35,8 @@ class Wardriver(plugins.Plugin):
         if not os.path.exists(self.__csv_path):
             os.makedirs(self.__csv_path)
             logging.warning('[WARDRIVER] Created CSV directory')
+        else:
+            self.__clean_csv_directory()
         
         if 'wigle' in self.options:
             self.__wigle_enabled = self.options['wigle']['enabled'] if 'enabled' in self.options['wigle'] else False
@@ -58,6 +60,24 @@ class Wardriver(plugins.Plugin):
         if len(self.__whitelist) > 0:
             logging.info(f'[WARDRIVER] Ignoring {len(self.__whitelist)} networks')
     
+    def __clean_csv_directory(self):
+        '''
+        Remove empty session files
+        '''
+        sessions = [ os.path.join(self.__csv_path, file) for file in os.listdir(self.__csv_path) ]
+        if len(sessions) > 0:
+            logging.info('[WARDRIVER] Removing empty session files')
+            for file in sessions:
+                try:
+                    with open(file, 'r') as session_file:
+                        session_data = session_file.read()
+
+                        if len(session_data.split('\n')) <= 3:
+                            os.remove(file)
+                            logging.info(f'[WARDRIVER] File {file} removed')
+                except Exception as e:
+                    logging.error(f'[WARDRIVER] Error while processing {file}')
+
     def __wigle_info(self):
         '''
         Return info used in CSV pre-header
