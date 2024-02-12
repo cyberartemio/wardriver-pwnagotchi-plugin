@@ -6,6 +6,12 @@
 
 A simple plugin for wardriving on your pwnagotchi. It saves all networks seen by bettercap on files using CSV format compatible with WiGLE (not only the ones whose handshakes has been collected). Optionally, it can also automatically uploads sessions file on WiGLE.
 
+<div align="center">
+    <h3>Join our crew and start sailing with us! 🏴‍☠️</h3>
+    <img src=".github/assets/banner.png" alt="" />
+    <p>Open <a href="https://wigle.net/stats#groupstats">https://wigle.net/stats#groupstats</a>, search for "<b>The crew of the Black Pearl</b>" and click "<code>join</code>"</p>
+</div>
+
 ## 🚀 Installation
 
 > [!IMPORTANT]
