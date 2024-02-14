@@ -97,7 +97,7 @@ class Wardriver(plugins.Plugin):
         '''
         Remove empty session files
         '''
-        sessions = [ os.path.join(self.__csv_path, file) for file in os.listdir(self.__csv_path) ]
+        sessions = [ os.path.join(self.__csv_path, file) for file in os.listdir(self.__csv_path) if os.path.isfile(os.path.join(self.__csv_path, file)) and file.endswith(".csv") ]
         if len(sessions) > 0:
             logging.info('[WARDRIVER] Removing empty session files')
             for file in sessions:
