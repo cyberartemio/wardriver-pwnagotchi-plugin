@@ -21,7 +21,7 @@ class Wardriver(plugins.Plugin):
         logging.debug('[WARDRIVER] Plugin created')
     
     def on_loaded(self):
-        logging.info('[WARDRIVER] Plugin loaded')
+        logging.info('[WARDRIVER] Plugin loaded (join the Discord server: https://discord.gg/5vrJbbW3ve)')
 
         self.__lock = Lock()
         
