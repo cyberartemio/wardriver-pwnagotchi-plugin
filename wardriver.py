@@ -193,36 +193,37 @@ class Wardriver(plugins.Plugin):
 
         self.__lock = Lock()
         
-        if 'whitelist' in self.options:
+        try:
             self.__whitelist = self.options['whitelist']
-        else:
+        except Exception:
             self.__whitelist = []
 
         self.__load_global_whitelist()
         
-        if 'path' in self.options:
+        try:
             self.__path = self.options['path']
-        else:
+        except Exception:
             self.__path = self.DEFAULT_PATH
         
-        if 'ui' in self.options:
+        try:
             self.__ui_enabled = self.options['ui']['enabled'] if 'enabled' in self.options['ui'] else False
-            try:
-                self.__ui_position = (self.options['ui']['position']['x'], self.options['ui']['position']['y'])
-            except Exception:
-                self.__ui_position = (5, 95)
-        else:
+        except Exception:
             self.__ui_enabled = False
-            self.__ui_position = (0, 0)
+
+        try:
+            self.__ui_position = (self.options['ui']['position']['x'], self.options['ui']['position']['y'])
+        except Exception:
+            self.__ui_position = (5, 95)
                 
-        if 'wigle' in self.options:
-            self.__wigle_enabled = self.options['wigle']['enabled'] if 'enabled' in self.options['wigle'] else False
-            self.__wigle_api_key = self.options['wigle']['api_key'] if 'api_key' in self.options['wigle'] else None
-            self.__wigle_donate = self.options['wigle']['donate'] if 'donate' in self.options['wigle'] else False
+        try:
+            self.__wigle_enabled = self.options['wigle']['enabled']
+            self.__wigle_api_key = self.options['wigle']['api_key']
+            self.__wigle_donate = self.options['wigle']['donate']
+            
             if self.__wigle_enabled and (not self.__wigle_api_key or self.__wigle_api_key == ''):
                 logging.error('[WARDRIVER] Wigle enabled but no api key provided!')
                 self.__wigle_enabled = False
-        else:
+        except Exception:
             self.__wigle_enabled = False
             self.__wigle_api_key = None
             self.__wigle_donate = False
