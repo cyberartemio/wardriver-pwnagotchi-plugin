@@ -36,8 +36,8 @@ wget https://raw.githubusercontent.com/cyberartemio/wardriver-pwnagotchi-plugin/
 ```toml
 # Enable the plugin
 main.plugins.wardriver.enabled = true
-# Directory where CSV files will be stored
-main.plugins.wardriver.csv_path = "/root/wardriver"
+# Directory SQLite db will be saved
+main.plugins.wardriver.path = "/root/wardriver"
 # Merge session files into a single file "wardriver_db.csv"
 main.plugins.wardriver.merge_sessions = false
 # Enable UI status text
