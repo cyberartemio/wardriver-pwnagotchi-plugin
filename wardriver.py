@@ -1,4 +1,5 @@
 import logging
+import re
 import sqlite3
 import os
 from datetime import datetime, timezone
@@ -32,16 +33,16 @@ class Database():
         self.__connection.close()
         logging.info('[WARDRIVER] Closed db connection')
 
-    def import_session(self, session_name, session_networks):
-        pass
-
-    def new_wardriving_session(self):
-        self.__cursor.execute('INSERT INTO sessions DEFAULT VALUES') # using default values
+    def new_wardriving_session(self, timestamp = None, wigle_uploaded = False):
+        if timestamp:
+            self.__cursor.execute('INSERT INTO sessions(created_at, wigle_uploaded) VALUES (?, ?)', [timestamp, wigle_uploaded])
+        else:    
+            self.__cursor.execute('INSERT INTO sessions(wigle_uploaded) VALUES (?)', [wigle_uploaded]) # using default values
         session_id = self.__cursor.lastrowid
         self.__connection.commit()
         return session_id
     
-    def add_wardrived_network(self, session_id, mac, ssid, auth_mode, latitude, longitude, altitude, accuracy, channel, rssi):
+    def add_wardrived_network(self, session_id, mac, ssid, auth_mode, latitude, longitude, altitude, accuracy, channel, rssi, seen_timestamp = None):
         self.__cursor.execute('SELECT id FROM networks WHERE mac = ? AND ssid = ?', [mac, ssid])
         network = self.__cursor.fetchone()
         network_id = network[0] if network else None
@@ -49,7 +50,10 @@ class Database():
             self.__cursor.execute('INSERT INTO networks(mac, ssid) VALUES (?, ?)', [mac, ssid])
             network_id = self.__cursor.lastrowid
         
-        self.__cursor.execute('INSERT INTO wardrive(session_id, network_id, auth_mode, latitude, longitude, altitude, accuracy, channel, rssi) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [session_id, network_id, auth_mode, latitude, longitude, altitude, accuracy, channel, rssi])
+        if seen_timestamp:
+            self.__cursor.execute('INSERT INTO wardrive(session_id, network_id, auth_mode, latitude, longitude, altitude, accuracy, channel, rssi, seen_timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [session_id, network_id, auth_mode, latitude, longitude, altitude, accuracy, channel, rssi, seen_timestamp])
+        else:
+            self.__cursor.execute('INSERT INTO wardrive(session_id, network_id, auth_mode, latitude, longitude, altitude, accuracy, channel, rssi) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [session_id, network_id, auth_mode, latitude, longitude, altitude, accuracy, channel, rssi])
         self.__connection.commit()
    
     def session_networks_count(self, session_id):
@@ -235,7 +239,6 @@ class Wardriver(plugins.Plugin):
         self.__db = Database(os.path.join(self.__path, self.DATABASE_NAME))
         self.__csv_generator = CSVGenerator()
         self.__session_reported = []
-        self.ready = True
 
         logging.info(f'[WARDRIVER] Saving session files inside {self.__path}')
         
@@ -243,7 +246,10 @@ class Wardriver(plugins.Plugin):
             logging.info('[WARDRIVER] Previous sessions will be uploaded to WiGLE once internet is available')
             logging.info('[WARDRIVER] Join the WiGLE group: search "The crew of the Black Pearl" and start wardriving with us!')
 
+        self.__import_old_csv()
+
         self.__session_id = self.__db.new_wardriving_session()
+        self.ready = True
 
         if len(self.__whitelist) > 0:
             logging.info(f'[WARDRIVER] Ignoring {len(self.__whitelist)} networks')
@@ -257,6 +263,68 @@ class Wardriver(plugins.Plugin):
                         self.__whitelist.append(ssid)
         except Exception as e:
             logging.critical('[WARDRIVER] Cannot read global config. Networks in global whitelist will NOT be ignored')
+    
+    def __import_old_csv(self):
+        '''
+        Import previous version csv files (<timestamp>.csv and wardriver_db.csv)
+        '''
+        # Import wardriver_db.csv
+        csv_db = os.path.join(self.__path, 'wardriver_db.csv')
+        if os.path.exists(csv_db):
+            logging.info(f'[WARDRIVER] Importing old {csv_db} into the db')
+            try:
+                with open(csv_db, 'r') as file:
+                    data = file.readlines()[1:]
+                    session_id = self.__db.new_wardriving_session(wigle_uploaded = True)
+                    for row in data:
+                        row = row.replace('\n', '')
+                        mac, ssid, auth_mode, seen_timestamp, channel, rssi, latitude, longitude, altitude, accuracy, entry_type = row.split(',')
+                        seen_timestamp = datetime.strptime(seen_timestamp, '%Y-%m-%d %H:%M:%S')
+                        self.__db.add_wardrived_network(session_id = session_id,
+                                                        mac = mac,
+                                                        ssid = ssid,
+                                                        auth_mode = auth_mode,
+                                                        latitude = latitude,
+                                                        longitude = longitude,
+                                                        altitude = altitude,
+                                                        accuracy = accuracy,
+                                                        channel = channel,
+                                                        rssi = rssi,
+                                                        seen_timestamp = seen_timestamp.timestamp())
+                os.remove(csv_db)
+                logging.info(f'[WARDRIVER] Successfully imported {csv_db}')
+            except Exception as e:
+                logging.error(f'[WARDRIVER] Error while importing {csv_db} file: {e}')
+        # Import all <timestamp>.csv
+        pattern = re.compile(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.csv')
+        sessions_files = [ file for file in os.listdir(self.__path) if pattern.match(file) ]
+        for session in sessions_files:
+            try:
+                session_path = os.path.join(self.__path, session)
+                logging.info(f'[WARDRIVER] Importing {session_path} into the db')
+                with open(session_path, 'r') as file:
+                    data = file.readlines()[2:]
+                    session_date = datetime.strptime(session.replace('.csv', ''), '%Y-%m-%dT%H:%M:%S')
+                    session_id = self.__db.new_wardriving_session(wigle_uploaded = True, timestamp = session_date)
+                    for row in data:
+                        row = row.replace('\n', '')
+                        mac, ssid, auth_mode, seen_timestamp, channel, rssi, latitude, longitude, altitude, accuracy, entry_type = row.split(',')
+                        seen_timestamp = datetime.strptime(seen_timestamp, '%Y-%m-%d %H:%M:%S')
+                        self.__db.add_wardrived_network(session_id = session_id,
+                                                        mac = mac,
+                                                        ssid = ssid,
+                                                        auth_mode = auth_mode,
+                                                        latitude = latitude,
+                                                        longitude = longitude,
+                                                        altitude = altitude,
+                                                        accuracy = accuracy,
+                                                        channel = channel,
+                                                        rssi = rssi,
+                                                        seen_timestamp = seen_timestamp.timestamp())
+                os.remove(session_path)
+                logging.info(f'[WARDRIVER] Successfully imported {session_path}')
+            except Exception as e:
+                logging.error(f'[WARDRIVER] Error while importing {session_path} file: {e}')
     
     def on_ui_setup(self, ui):
         if self.__ui_enabled:
