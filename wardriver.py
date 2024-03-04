@@ -21,9 +21,9 @@ class Database():
         logging.info('[WARDRIVER] Setting up database connection...')
         self.__connection = sqlite3.connect(self.__path, check_same_thread = False, detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
         self.__cursor = self.__connection.cursor()
-        self.__cursor.execute('CREATE TABLE IF NOT EXISTS sessions ("id" INTEGER, "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP, "wigle_uploaded" INTEGER DEFAULT 0, PRIMARY KEY("id" AUTOINCREMENT))') # sessions table contains wardriving sessions
+        self.__cursor.execute('CREATE TABLE IF NOT EXISTS sessions ("id" INTEGER, "created_at" TEXT DEFAULT CURRENT_TIMESTAMP, "wigle_uploaded" INTEGER DEFAULT 0, PRIMARY KEY("id" AUTOINCREMENT))') # sessions table contains wardriving sessions
         self.__cursor.execute('CREATE TABLE IF NOT EXISTS networks ("id" INTEGER, "mac" TEXT NOT NULL, "ssid" TEXT, PRIMARY KEY ("id" AUTOINCREMENT))') # networks table contains seen networks without coordinates/sessions info
-        self.__cursor.execute('CREATE TABLE IF NOT EXISTS wardrive ("id" INTEGER, "session_id" INTEGER NOT NULL, "network_id" INTEGER NOT NULL, "auth_mode" TEXT NOT NULL, "latitude" TEXT NOT NULL, "longitude" TEXT NOT NULL, "altitude" TEXT NOT NULL, "accuracy" INTEGER NOT NULL, "channel" INTEGER NOT NULL, "rssi" INTEGER NOT NULL, "seen_timestamp" TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY("id" AUTOINCREMENT), FOREIGN KEY("session_id") REFERENCES sessions("id"), FOREIGN KEY("network_id") REFERENCES networks("id"))') # wardrive table contains the relations between sessions and networks with timestamp and coordinates
+        self.__cursor.execute('CREATE TABLE IF NOT EXISTS wardrive ("id" INTEGER, "session_id" INTEGER NOT NULL, "network_id" INTEGER NOT NULL, "auth_mode" TEXT NOT NULL, "latitude" TEXT NOT NULL, "longitude" TEXT NOT NULL, "altitude" TEXT NOT NULL, "accuracy" INTEGER NOT NULL, "channel" INTEGER NOT NULL, "rssi" INTEGER NOT NULL, "seen_timestamp" TEXT DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY("id" AUTOINCREMENT), FOREIGN KEY("session_id") REFERENCES sessions("id"), FOREIGN KEY("network_id") REFERENCES networks("id"))') # wardrive table contains the relations between sessions and networks with timestamp and coordinates
         self.__connection.commit()
         logging.info('[WARDRIVER] Succesfully connected to db')
     
@@ -279,7 +279,6 @@ class Wardriver(plugins.Plugin):
                     for row in data:
                         row = row.replace('\n', '')
                         mac, ssid, auth_mode, seen_timestamp, channel, rssi, latitude, longitude, altitude, accuracy, entry_type = row.split(',')
-                        seen_timestamp = datetime.strptime(seen_timestamp, '%Y-%m-%d %H:%M:%S')
                         self.__db.add_wardrived_network(session_id = session_id,
                                                         mac = mac,
                                                         ssid = ssid,
@@ -290,7 +289,7 @@ class Wardriver(plugins.Plugin):
                                                         accuracy = accuracy,
                                                         channel = channel,
                                                         rssi = rssi,
-                                                        seen_timestamp = seen_timestamp.timestamp())
+                                                        seen_timestamp = seen_timestamp)
                 os.remove(csv_db)
                 logging.info(f'[WARDRIVER] Successfully imported {csv_db}')
             except Exception as e:
@@ -309,7 +308,6 @@ class Wardriver(plugins.Plugin):
                     for row in data:
                         row = row.replace('\n', '')
                         mac, ssid, auth_mode, seen_timestamp, channel, rssi, latitude, longitude, altitude, accuracy, entry_type = row.split(',')
-                        seen_timestamp = datetime.strptime(seen_timestamp, '%Y-%m-%d %H:%M:%S')
                         self.__db.add_wardrived_network(session_id = session_id,
                                                         mac = mac,
                                                         ssid = ssid,
@@ -320,7 +318,7 @@ class Wardriver(plugins.Plugin):
                                                         accuracy = accuracy,
                                                         channel = channel,
                                                         rssi = rssi,
-                                                        seen_timestamp = seen_timestamp.timestamp())
+                                                        seen_timestamp = seen_timestamp)
                 os.remove(session_path)
                 logging.info(f'[WARDRIVER] Successfully imported {session_path}')
             except Exception as e:
