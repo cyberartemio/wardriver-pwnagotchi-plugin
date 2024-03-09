@@ -9,7 +9,10 @@ from pwnagotchi.ui.components import LabeledValue
 from pwnagotchi.ui.view import BLACK
 import pwnagotchi.ui.fonts as fonts
 from threading import Lock
+import json
 import requests
+from flask import abort
+from flask import render_template_string
 
 class Database():
     def __init__(self, path):
@@ -36,7 +39,7 @@ class Database():
     def new_wardriving_session(self, timestamp = None, wigle_uploaded = False):
         if timestamp:
             self.__cursor.execute('INSERT INTO sessions(created_at, wigle_uploaded) VALUES (?, ?)', [timestamp, wigle_uploaded])
-        else:    
+        else:
             self.__cursor.execute('INSERT INTO sessions(wigle_uploaded) VALUES (?)', [wigle_uploaded]) # using default values
         session_id = self.__cursor.lastrowid
         self.__connection.commit()
@@ -109,10 +112,67 @@ class Database():
         '''
         self.__cursor.execute('DELETE FROM sessions WHERE sessions.id NOT IN (SELECT wardrive.session_id FROM wardrive GROUP BY wardrive.session_id)')
         self.__connection.commit()
+    
+    # Web UI queries
+    def general_stats(self):
+        self.__cursor.execute('SELECT COUNT(id) FROM networks')
+        total_networks = self.__cursor.fetchone()[0]
+        self.__cursor.execute('SELECT COUNT(id) FROM sessions')
+        total_sessions = self.__cursor.fetchone()[0]
+        self.__cursor.execute('SELECT COUNT(id) FROM sessions WHERE wigle_uploaded = 1')
+        sessions_uploaded = self.__cursor.fetchone()[0]
+        return {
+            'total_networks': total_networks,
+            'total_sessions': total_sessions,
+            'sessions_uploaded': sessions_uploaded
+        }
+    
+    def sessions(self):
+        self.__cursor.execute('SELECT sessions.*, COUNT(wardrive.id) FROM sessions JOIN wardrive ON sessions.id = wardrive.session_id GROUP BY sessions.id')
+        rows = self.__cursor.fetchall()
+        sessions = []
+        for row in rows:
+            sessions.append({
+                'id': row[0],
+                'created_at': row[1],
+                'wigle_uploaded': row[2] == 1,
+                'networks': row[3]
+            })
+        return sessions
+    
+    def current_session_stats(self, session_id):
+        self.__cursor.execute('SELECT created_at FROM sessions WHERE id = ?', [session_id])
+        created_at = self.__cursor.fetchone()[0]
+        self.__cursor.execute('SELECT COUNT(id) FROM wardrive WHERE session_id = ?', [session_id])
+        networks = self.__cursor.fetchone()[0]
+        return {
+            "id": session_id,
+            "created_at": created_at,
+            "networks": networks
+        }
+
+    def networks(self):
+        self.__cursor.execute('SELECT n.*, MIN(w.seen_timestamp), MIN(w.session_id), MAX(w.seen_timestamp), MAX(w.session_id), COUNT(n.id) FROM networks n JOIN wardrive w ON n.id = w.network_id GROUP BY n.id')
+        rows = self.__cursor.fetchall()
+        networks = []
+        for row in rows:
+            id, mac, ssid, first_seen, first_session, last_seen, last_session, sessions_count = row
+            networks.append({
+                "id": id,
+                "mac": mac,
+                "ssid": ssid,
+                "first_seen": first_seen,
+                "first_session": first_session,
+                "last_seen": last_seen,
+                "last_session": last_session,
+                "sessions_count": sessions_count
+            })
+        
+        return networks
 
 class CSVGenerator():
     def __init__(self):
-       self.__wigle_info() 
+       self.__wigle_info()
         
     def __wigle_info(self):
         '''
@@ -196,21 +256,14 @@ class Wardriver(plugins.Plugin):
         logging.info('[WARDRIVER] Plugin loaded (join the Discord server: https://discord.gg/5vrJbbW3ve)')
 
         self.__lock = Lock()
-        
-        try:
-            self.__whitelist = self.options['whitelist']
-        except Exception:
-            self.__whitelist = []
 
-        self.__load_global_whitelist()
-        
         try:
             self.__path = self.options['path']
         except Exception:
             self.__path = self.DEFAULT_PATH
         
         try:
-            self.__ui_enabled = self.options['ui']['enabled'] if 'enabled' in self.options['ui'] else False
+            self.__ui_enabled = self.options['ui']['enabled']
         except Exception:
             self.__ui_enabled = False
 
@@ -218,6 +271,13 @@ class Wardriver(plugins.Plugin):
             self.__ui_position = (self.options['ui']['position']['x'], self.options['ui']['position']['y'])
         except Exception:
             self.__ui_position = (5, 95)
+        
+        try:
+            self.__whitelist = self.options['whitelist']
+        except Exception:
+            self.__whitelist = []
+
+        self.__load_global_whitelist()        
                 
         try:
             self.__wigle_enabled = self.options['wigle']['enabled']
@@ -238,7 +298,9 @@ class Wardriver(plugins.Plugin):
         
         self.__db = Database(os.path.join(self.__path, self.DATABASE_NAME))
         self.__csv_generator = CSVGenerator()
-        self.__session_reported = []
+        self.__session_reported = [] # TODO: remove
+        self.__last_ap_refresh = None
+        self.__last_ap_reported = []
 
         logging.info(f'[WARDRIVER] Saving session files inside {self.__path}')
         
@@ -370,6 +432,8 @@ class Wardriver(plugins.Plugin):
             # avoid 0.000... measurements
             gps_data["Latitude"], gps_data["Longitude"]
         ]):
+            self.__last_ap_refresh = datetime.now()
+            self.__last_ap_reported = []
             coordinates = {
                 'latitude': gps_data["Latitude"],
                 'longitude': gps_data["Longitude"],
@@ -394,6 +458,13 @@ class Wardriver(plugins.Plugin):
                         capabilities = f'{capabilities}[{ap["authentication"]}]'
                     channel = ap['channel']
                     rssi = ap['rssi']
+                    self.__last_ap_reported.append({
+                        "mac": mac,
+                        "ssid": ssid,
+                        "capabilities": capabilities,
+                        "channel": channel,
+                        "rssi": rssi
+                    })
                     self.__db.add_wardrived_network(session_id = self.__session_id,
                                                     mac = mac,
                                                     ssid = ssid,
@@ -446,4 +517,23 @@ class Wardriver(plugins.Plugin):
                             continue
     
     def on_webhook(self, path, request):
-        pass
+        if request.method == 'GET':
+            if path == '/' or not path:
+                return ''
+            elif path == 'current-session':
+                data = self.__db.current_session_stats(self.__session_id)
+                data['last_ap_refresh'] = self.__last_ap_refresh.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+                data['last_ap_reported'] = self.__last_ap_reported
+                return json.dumps(data)
+            elif path == 'general-stats':
+                stats = self.__db.general_stats()
+                return json.dumps(stats)
+            elif path == 'sessions':
+                sessions = self.__db.sessions()
+                return json.dumps(sessions)
+            elif path == 'networks':
+                networks = self.__db.networks()
+                return json.dumps(networks)
+            else:
+                abort(404)
+        abort(404)
