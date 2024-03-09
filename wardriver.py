@@ -537,7 +537,8 @@ class Wardriver(plugins.Plugin):
                     'wigle_enabled': self.__wigle_enabled,
                     'whitelist': self.__whitelist,
                     'db_path': self.__path,
-                    'ui_enabled': self.__ui_enabled
+                    'ui_enabled': self.__ui_enabled,
+                    'wigle_api_key': self.__wigle_api_key
                 }
                 return json.dumps(stats)
             elif "csv/" in path:
@@ -676,13 +677,34 @@ HTML_PAGE = '''
                             </article>
                         </div>
                     </div>
-                    <h3>Current config</h3>
-                    <ul>
-                        <li>WiGLE automatic uploading enabled: <span id="config-wigle">-</span></li>
-                        <li>UI enabled: <span id="config-ui">-</span></li>
-                        <li>Database file path: <span id="config-db">-</span></li>
-                        <li>Whitelist networks:<ul id="config-whitelist"></ul></li>
-                    </ul>
+                    <div class="grid">
+                        <div>
+                            <h3>Your WiGLE stats</h3>
+                            <article>
+                                <ul>
+                                    <li>Username: <span id="wigle-username">-</span></li>
+                                    <li>Global rank: #<span id="wigle-rank">-</span></li>
+                                    <li>Month rank: #<span id="wigle-month-rank">-</span></li>
+                                    <li>Seen WiFi: <span id="wigle-seen-wifi"></span></li>
+                                    <li>Discovered WiFi: <span id="wigle-discovered-wifi">-</span></li>
+                                    <li>WiFi this month: <span id="wigle-current-month-wifi">-</span></li>
+                                    <li>WiFi previous month: <span id="wigle-previous-month-wifi">-</span></li>
+                                </ul>
+                                <div id="wigle-badge" class="center"></div>
+                            </article>
+                        </div>
+                        <div>
+                            <h3>Plugin config</h3>
+                            <article>
+                                <ul>
+                                    <li>WiGLE automatic uploading enabled: <span id="config-wigle">-</span></li>
+                                    <li>UI enabled: <span id="config-ui">-</span></li>
+                                    <li>Database file path: <span id="config-db">-</span></li>
+                                    <li>Whitelist networks:<ul id="config-whitelist"></ul></li>
+                                </ul>
+                            </article>
+                        </div>
+                    </div>
                 </div>
                 <div id="sessions">
                     <h3>Sessions</h3>
@@ -788,6 +810,18 @@ HTML_PAGE = '''
             }
             xobj.send(null);
         }
+        function loadWigleStats(api_key, callback) {
+            var xobj = new XMLHttpRequest();
+            xobj.overrideMimeType("application/json")
+            xobj.open("GET", "https://api.wigle.net/api/v2/stats/user", true);
+            xobj.setRequestHeader("Authorization", "Basic " + api_key)
+            xobj.onreadystatechange = function () {
+                if (xobj.readyState == 4 && xobj.status == "200") {
+                    callback(JSON.parse(xobj.responseText))
+                }
+            }
+            xobj.send(null);
+        }
         function parseUTCDate(date) {
             var utcDateStr = date.replace(" ", "T")
             utcDateStr += ".000Z"
@@ -857,6 +891,19 @@ HTML_PAGE = '''
                         item.innerText = network
                         document.getElementById("config-whitelist").appendChild(item)
                     }
+                
+                if(data.config.wigle_api_key) {
+                    loadWigleStats(data.config.wigle_api_key, function(stats) {
+                        document.getElementById("wigle-username").innerText = stats.user
+                        document.getElementById("wigle-rank").innerText = stats.rank
+                        document.getElementById("wigle-month-rank").innerText = stats.monthRank
+                        document.getElementById("wigle-seen-wifi").innerText = stats.statistics.discoveredWiFi
+                        document.getElementById("wigle-discovered-wifi").innerText = stats.statistics.discoveredWiFiGPS
+                        document.getElementById("wigle-current-month-wifi").innerText = stats.statistics.eventMonthCount
+                        document.getElementById("wigle-previous-month-wifi").innerText = stats.statistics.eventPrevMonthCount
+                        document.getElementById("wigle-badge").innerHTML = "<img src='https://wigle.net" + stats.imageBadgeUrl +"' alt='wigle-profile-badge' />"
+                    })
+                }
             })
         }
         function showSessions() {
