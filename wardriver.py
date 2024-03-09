@@ -524,7 +524,7 @@ class Wardriver(plugins.Plugin):
                 return render_template_string(HTML_PAGE, plugin_version = self.__version__)
             elif path == 'current-session':
                 data = self.__db.current_session_stats(self.__session_id)
-                data['last_ap_refresh'] = self.__last_ap_refresh.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+                data['last_ap_refresh'] = self.__last_ap_refresh.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S") if self.__last_ap_refresh else None
                 data['last_ap_reported'] = self.__last_ap_reported
                 return json.dumps(data)
             elif path == 'general-stats':
@@ -732,20 +732,20 @@ HTML_PAGE = '''
 
         function downloadCSV(session_id) {
             request("GET", "/plugins/wardriver/csv/" + session_id, function(text) {
-                const blob = new Blob([text], { type: 'text/csv' }); 
+                const blob = new Blob([text], { type: 'text/csv' })
 
                 // Creating an object for downloading url 
                 const url = window.URL.createObjectURL(blob) 
 
                 // Creating an anchor(a) tag of HTML 
-                const a = document.createElement('a') 
+                const a = document.createElement('a')
 
                 // Passing the blob downloading url  
                 a.setAttribute('href', url) 
 
                 // Setting the anchor tag attribute for downloading 
                 // and passing the download file name 
-                a.setAttribute('download', 'session.csv'); 
+                a.setAttribute('download', 'session.csv')
 
                 // Performing a download with click 
                 a.click()
@@ -755,7 +755,7 @@ HTML_PAGE = '''
         // Make HTTP request to pwnagotchi "server"
         function request(method, url, callback) {
             var xobj = new XMLHttpRequest();
-            xobj.overrideMimeType("application/json");
+            xobj.overrideMimeType("application/json")
             xobj.open(method, url, true);
             xobj.onreadystatechange = function () {
                 if (xobj.readyState == 4 && xobj.status == "200") {
@@ -768,7 +768,7 @@ HTML_PAGE = '''
                     }
                     callback(response)
                 }
-            };
+            }
             xobj.send(null);
         }
         function parseUTCDate(date) {
