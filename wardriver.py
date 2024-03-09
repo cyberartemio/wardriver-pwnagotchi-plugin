@@ -280,19 +280,23 @@ class Wardriver(plugins.Plugin):
             self.__whitelist = []
 
         self.__load_global_whitelist()        
-                
+        
+        try:
+            self.__wigle_api_key = self.options['wigle']['api_key']
+        except Exception:
+            self.__wigle_api_key = None
+        try:
+            self.__wigle_donate = self.options['wigle']['donate']
+        except Exception:
+            self.__wigle_donate = False
         try:
             self.__wigle_enabled = self.options['wigle']['enabled']
-            self.__wigle_api_key = self.options['wigle']['api_key']
-            self.__wigle_donate = self.options['wigle']['donate']
             
             if self.__wigle_enabled and (not self.__wigle_api_key or self.__wigle_api_key == ''):
                 logging.error('[WARDRIVER] Wigle enabled but no api key provided!')
                 self.__wigle_enabled = False
         except Exception:
             self.__wigle_enabled = False
-            self.__wigle_api_key = None
-            self.__wigle_donate = False
         
         if not os.path.exists(self.__path):
             os.makedirs(self.__path)
