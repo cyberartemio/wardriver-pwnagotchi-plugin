@@ -741,7 +741,7 @@ HTML_PAGE = '''
     (function() {
         container = document.getElementById("data-container")
         setupMenuClickListeners()
-        showStats()
+        showCurrentSession()
 
         function downloadCSV(session_id) {
             request("GET", "/plugins/wardriver/csv/" + session_id, function(text) {
