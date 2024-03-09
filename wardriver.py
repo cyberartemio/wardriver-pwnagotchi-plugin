@@ -529,6 +529,12 @@ class Wardriver(plugins.Plugin):
                 return json.dumps(data)
             elif path == 'general-stats':
                 stats = self.__db.general_stats()
+                stats['config'] = {
+                    'wigle_enabled': self.__wigle_enabled,
+                    'whitelist': self.__whitelist,
+                    'db_path': self.__path,
+                    'ui_enabled': self.__ui_enabled
+                }
                 return json.dumps(stats)
             elif "csv/" in path:
                 session_id = path.split('/')[-1]
@@ -666,6 +672,13 @@ HTML_PAGE = '''
                             </article>
                         </div>
                     </div>
+                    <h3>Current config</h3>
+                    <ul>
+                        <li>WiGLE automatic uploading enabled: <span id="config-wigle">-</span></li>
+                        <li>UI enabled: <span id="config-ui">-</span></li>
+                        <li>Database file path: <span id="config-db">-</span></li>
+                        <li>Whitelist networks:<ul id="config-whitelist"></ul></li>
+                    </ul>
                 </div>
                 <div id="sessions">
                     <h3>Sessions</h3>
@@ -828,6 +841,18 @@ HTML_PAGE = '''
                 document.getElementById("total-networks").innerText = data.total_networks
                 document.getElementById("total-sessions").innerText = data.total_sessions
                 document.getElementById("sessions-uploaded").innerText = data.sessions_uploaded
+                document.getElementById("config-wigle").innerText = data.config.wigle_enabled
+                document.getElementById("config-ui").innerText = data.config.ui_enabled
+                document.getElementById("config-db").innerText = data.config.db_path
+                document.getElementById("config-whitelist").innerHTML = ""
+                if(data.config.whitelist.length == 0)
+                    document.getElementById("config-whitelist").innerHTML = "none"
+                else
+                    for(var network of data.config.whitelist) {
+                        var item = document.createElement("li")
+                        item.innerText = network
+                        document.getElementById("config-whitelist").appendChild(item)
+                    }
             })
         }
         function showSessions() {
