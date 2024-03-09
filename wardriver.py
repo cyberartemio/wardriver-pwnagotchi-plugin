@@ -229,7 +229,7 @@ class CSVGenerator():
         return 'MAC,SSID,AuthMode,FirstSeen,Channel,RSSI,CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,Type\n'
     
     def __csv_network(self, network):
-        return f'{network["mac"]},{network["ssid"]},{network["seen_timestamp"].astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")},{network["channel"]},{network["rssi"]},{network["latitude"]},{network["longitude"]},{network["altitude"]},{network["accuracy"]},WIFI\n'
+        return f'{network["mac"]},{network["ssid"]},{network["seen_timestamp"]},{network["channel"]},{network["rssi"]},{network["latitude"]},{network["longitude"]},{network["altitude"]},{network["accuracy"]},WIFI\n'
 
     def networks_to_csv(self, networks):
         csv = self.__csv_header()
@@ -530,6 +530,11 @@ class Wardriver(plugins.Plugin):
             elif path == 'general-stats':
                 stats = self.__db.general_stats()
                 return json.dumps(stats)
+            elif "csv/" in path:
+                session_id = path.split('/')[-1]
+                networks = self.__db.session_networks(session_id)
+                csv = self.__csv_generator.networks_to_csv(networks)
+                return csv
             elif path == 'sessions':
                 sessions = self.__db.sessions()
                 return json.dumps(sessions)
@@ -724,6 +729,28 @@ HTML_PAGE = '''
         container = document.getElementById("data-container")
         setupMenuClickListeners()
         showStats()
+
+        function downloadCSV(session_id) {
+            request("GET", "/plugins/wardriver/csv/" + session_id, function(text) {
+                const blob = new Blob([text], { type: 'text/csv' }); 
+
+                // Creating an object for downloading url 
+                const url = window.URL.createObjectURL(blob) 
+
+                // Creating an anchor(a) tag of HTML 
+                const a = document.createElement('a') 
+
+                // Passing the blob downloading url  
+                a.setAttribute('href', url) 
+
+                // Setting the anchor tag attribute for downloading 
+                // and passing the download file name 
+                a.setAttribute('download', 'session.csv'); 
+
+                // Performing a download with click 
+                a.click()
+            })
+        }
         
         // Make HTTP request to pwnagotchi "server"
         function request(method, url, callback) {
@@ -732,7 +759,14 @@ HTML_PAGE = '''
             xobj.open(method, url, true);
             xobj.onreadystatechange = function () {
                 if (xobj.readyState == 4 && xobj.status == "200") {
-                    callback(JSON.parse(xobj.responseText));
+                    var response = xobj.responseText
+                    try {
+                        response = JSON.parse(xobj.responseText)
+                    }
+                    catch(error) {
+                        
+                    }
+                    callback(response)
                 }
             };
             xobj.send(null);
@@ -813,7 +847,16 @@ HTML_PAGE = '''
                     createdCol.innerHTML = session.created_at
                     networksCol.innerHTML = session.networks
                     wigleCol.innerHTML = "<i class='fa-regular " + (session.wigle_uploaded ? "fa-square-check" : "fa-square") + "'></i>"
-                    actionsCol.innerHTML = "<i class='fa-solid fa-file-csv'></i> <i class='fa-solid fa-cloud-arrow-up'></i> <i class='fa-solid fa-trash'></i>"
+                    csvIcon = document.createElement('i')
+                    csvIcon.className = 'fa-solid fa-file-csv'
+                    csvIcon.addEventListener("click", function(session_id) { return function() { downloadCSV(session_id)} } (session.id))
+                    wigleIcon = document.createElement('i')
+                    wigleIcon.className = 'fa-solid fa-cloud-arrow-up'
+                    deleteIcon = document.createElement('i')
+                    deleteIcon.className = 'fa-solid fa-trash'
+                    actionsCol.appendChild(csvIcon)
+                    actionsCol.appendChild(wigleIcon)
+                    actionsCol.appendChild(deleteIcon)
                     tableRow.appendChild(idCol)
                     tableRow.appendChild(createdCol)
                     tableRow.appendChild(networksCol)
