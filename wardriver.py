@@ -152,8 +152,9 @@ class Database():
         }
 
     def networks(self):
-        self.__cursor.execute('SELECT n.*, MIN(w.seen_timestamp), MIN(w.session_id), MAX(w.seen_timestamp), MAX(w.session_id), COUNT(n.id) FROM networks n JOIN wardrive w ON n.id = w.network_id GROUP BY n.id')
-        rows = self.__cursor.fetchall()
+        cursor = self.__connection.cursor()
+        cursor.execute('SELECT n.*, MIN(w.seen_timestamp), MIN(w.session_id), MAX(w.seen_timestamp), MAX(w.session_id), COUNT(n.id) FROM networks n JOIN wardrive w ON n.id = w.network_id GROUP BY n.id')
+        rows = cursor.fetchall()
         networks = []
         for row in rows:
             id, mac, ssid, first_seen, first_session, last_seen, last_session, sessions_count = row
@@ -167,6 +168,7 @@ class Database():
                 "last_session": last_session,
                 "sessions_count": sessions_count
             })
+        cursor.close()
         
         return networks
 
@@ -519,7 +521,7 @@ class Wardriver(plugins.Plugin):
     def on_webhook(self, path, request):
         if request.method == 'GET':
             if path == '/' or not path:
-                return ''
+                return render_template_string(HTML_PAGE, plugin_version = self.__version__)
             elif path == 'current-session':
                 data = self.__db.current_session_stats(self.__session_id)
                 data['last_ap_refresh'] = self.__last_ap_refresh.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
@@ -537,3 +539,321 @@ class Wardriver(plugins.Plugin):
             else:
                 abort(404)
         abort(404)
+
+HTML_PAGE = '''
+{% extends "base.html" %}
+{% set active_page = "plugins" %}
+{% block title %}
+    Wardriver
+{% endblock %}
+
+{% block meta %}
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=0" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.21/css/jquery.dataTables.min.css" integrity="sha512-1k7mWiTNoyx2XtmI96o+hdjP8nn0f3Z2N4oF/9ZZRgijyV4omsKOXEnqL1gKQNPy2MTSP9rIEWGcH/CInulptA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
+    />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+{% endblock %}
+
+{% block styles %}
+{{ super() }}
+    <style>
+        .center {
+            text-align: center;
+        }
+        #menu ul li {
+            cursor: pointer;
+        }
+        .visible {
+            display: initial;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+   <div class="container" data-theme="light">
+        <header>
+            <hgroup class="center">
+                <h1>Wardriver plugin</h1>
+                <p>v{{ plugin_version }} by cyberartemio</p>
+            </hgroup>
+        </header>
+        <main>
+            <nav id="menu">
+                <ul>
+                    <li id="menu-current-session"><a><i class="fa-solid fa-satellite-dish"></i> Current session</a></li>
+                    <li id="menu-stats"><a><i class="fa-solid fa-chart-line"></i> Stats</a></li>
+                    <li id="menu-sessions"><a><i class="fa-solid fa-table"></i> Sessions</a></li>
+                    <li id="menu-networks"><a><i class="fa-solid fa-wifi"></i> Networks</a></li>
+                    <li id="menu-map"><a><i class="fa-solid fa-map-location-dot"></i> Map</a></li>
+                </ul>
+            </nav>
+            <div id="data-container">
+                <div id="current-session">
+                    <h3>Current session</h3>
+                    <div class="grid">
+                        <div>
+                            <article class="center">
+                                <header>Session id</header>
+                                <span id="current-session-id"></span>
+                            </article>
+                        </div>
+                        <div>
+                            <article class="center">
+                                <header>Started at </header>
+                                <span id="current-session-start"></span>
+                            </article>
+                        </div>
+                        <div>
+                            <article class="center">
+                                <header>Networks count</header>
+                                <span id="current-session-networks"></span>
+                            </article>
+                        </div>
+                        <div>
+                            <article class="center">
+                                <header>Last APs refresh</header>
+                                <span id="current-session-last-update"></span>
+                            </article>
+                        </div>
+                    </div>
+                    <h4>Last AP refresh networks</h4>
+                    <div class="overflow-auto">
+                        <table>
+                            <thead>
+                                <th scope="col">SSID</th>
+                                <th scope="col">MAC</th>
+                                <th scope="col">Channel</th>
+                                <th scope="col">RSSI</th>
+                                <th scope="col">Capabilities</th>
+                            </thead>
+                            <tbody id="current-session-table">
+
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div id="stats">
+                    <h3>Overall</h3>
+                    <div class="grid">
+                        <div>
+                            <article class="center">
+                                <header>Networks seen</header>
+                                <span id="total-networks"></span>
+                            </article>
+                        </div>
+                        <div>
+                            <article class="center">
+                                <header>Sessions count</header>
+                                <span id="total-sessions"></span>
+                            </article>
+                        </div>
+                        <div>
+                            <article class="center">
+                                <header>Sessions uploaded</header>
+                                <span id="sessions-uploaded"></span>
+                            </article>
+                        </div>
+                    </div>
+                </div>
+                <div id="sessions">
+                    <h3>Sessions</h3>
+                    <p>Actions:<br />
+                    <i class="fa-solid fa-file-csv"></i> : download session's CSV file<br />
+                    <i class="fa-solid fa-cloud-arrow-up"></i> : upload session to WiGLE<br />
+                    <i class="fa-solid fa-trash"></i> : delete the session (<b>not the networks</b>)
+                    </p>
+                    <div class="overflow-auto">
+                        <table>
+                            <thead>
+                                <th scope="col">ID</th>
+                                <th scope="col">Date</th>
+                                <th scope="col">Networks</th>
+                                <th scope="col">Uploaded</th>
+                                <th scope="col">Actions</th>
+                            </thead>
+                            <tbody id="sessions-table">
+    
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div id="networks">
+                    <h3>Networks</h3>
+                    <div class="overflow-auto">
+                        <table id="networks-table-container">
+                            <thead>
+                                <th scope="col">ID</th>
+                                <th scope="col">MAC</th>
+                                <th scope="col">SSID</th>
+                                <th scope="col">First seen</th>
+                                <th scope="col">First session ID</th>
+                                <th scope="col">Last seen</th>
+                                <th scope="col">Last session ID</th>
+                                <th scope="col"># sessions</th>
+                            </thead>
+                            <tbody id="networks-table">
+    
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div id="map">
+                    <h3>Map</h3>
+                    <p>Soon...</p>
+                </div>
+            </div>
+        </main>
+        <footer>
+
+        </footer>
+    </div>
+{% endblock %}
+{% block script %}
+    </script>
+    <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.21/js/jquery.dataTables.min.js" integrity="sha512-BkpSL20WETFylMrcirBahHfSnY++H2O1W+UnEEO4yNIl+jI2+zowyoGJpbtk6bx97fBXf++WJHSSK2MV4ghPcg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script>
+    (function() {
+        container = document.getElementById("data-container")
+        setupMenuClickListeners()
+        showStats()
+        
+        // Make HTTP request to pwnagotchi "server"
+        function request(method, url, callback) {
+            var xobj = new XMLHttpRequest();
+            xobj.overrideMimeType("application/json");
+            xobj.open(method, url, true);
+            xobj.onreadystatechange = function () {
+                if (xobj.readyState == 4 && xobj.status == "200") {
+                    callback(JSON.parse(xobj.responseText));
+                }
+            };
+            xobj.send(null);
+        }
+        function parseUTCDate(date) {
+            var utcDateStr = date.replace(" ", "T")
+            utcDateStr += ".000Z"
+            return new Date(utcDateStr)
+        }
+        function updateContainerView(showing) {
+            var views = [
+                "current-session",
+                "stats",
+                "sessions",
+                "networks",
+                "map"
+            ]
+
+            $("#networks-table-container").DataTable().destroy();
+
+            for(var view of views)
+                document.getElementById(view).className = view == showing ? "visible" : "hidden"
+        }
+        function showCurrentSession() {
+            updateContainerView("current-session")
+            request('GET', "/plugins/wardriver/current-session", function(data) {
+                document.getElementById("current-session-id").innerHTML = data.id
+                document.getElementById("current-session-networks").innerHTML = data.networks
+                document.getElementById("current-session-last-update").innerHTML = data.last_ap_refresh ? "<time class='timeago' datetime='" + parseUTCDate(data.last_ap_refresh).toISOString() + "'>-</time>" : "-"
+                var sessionStartDate = parseUTCDate(data.created_at)
+                document.getElementById("current-session-start").innerHTML = ("0" + sessionStartDate.getHours()).slice(-2) + ":" + ("0" + sessionStartDate.getMinutes()).slice(-2)
+                var apTable = document.getElementById("current-session-table")
+                apTable.innerHTML = ""
+                for(var network of data.last_ap_reported) {
+                    var tableRow = document.createElement('tr')
+                    var macCol = document.createElement('td')
+                    var ssidCol = document.createElement('td')
+                    var channelCol = document.createElement('td')
+                    var rssiCol = document.createElement('td')
+                    var capabilitiesCol = document.createElement('td')
+                    macCol.innerText = network.mac
+                    ssidCol.innerText = network.ssid
+                    channelCol.innerText = network.channel
+                    rssiCol.innerText = network.rssi
+                    capabilitiesCol.innerText = network.capabilities
+                    tableRow.appendChild(macCol)
+                    tableRow.appendChild(ssidCol)
+                    tableRow.appendChild(channelCol)
+                    tableRow.appendChild(rssiCol)
+                    tableRow.appendChild(capabilitiesCol)
+                    apTable.appendChild(tableRow)
+                }
+                jQuery("time.timeago").timeago();
+            })
+        }
+        function showStats() {
+            updateContainerView("stats")
+            request('GET', "/plugins/wardriver/general-stats", function(data) {
+                document.getElementById("total-networks").innerText = data.total_networks
+                document.getElementById("total-sessions").innerText = data.total_sessions
+                document.getElementById("sessions-uploaded").innerText = data.sessions_uploaded
+            })
+        }
+        function showSessions() {
+            updateContainerView("sessions")
+            request('GET', "/plugins/wardriver/sessions", function(data) {
+                var sessionsTable = document.getElementById("sessions-table")
+                sessionsTable.innerHTML = ""
+                for(var session of data) {
+                    var tableRow = document.createElement("tr")
+                    var idCol = document.createElement("td")
+                    var createdCol = document.createElement("td")
+                    var networksCol = document.createElement("td")
+                    var wigleCol = document.createElement("td")
+                    var actionsCol = document.createElement("td")
+
+                    idCol.innerHTML = session.id
+                    createdCol.innerHTML = session.created_at
+                    networksCol.innerHTML = session.networks
+                    wigleCol.innerHTML = "<i class='fa-regular " + (session.wigle_uploaded ? "fa-square-check" : "fa-square") + "'></i>"
+                    actionsCol.innerHTML = "<i class='fa-solid fa-file-csv'></i> <i class='fa-solid fa-cloud-arrow-up'></i> <i class='fa-solid fa-trash'></i>"
+                    tableRow.appendChild(idCol)
+                    tableRow.appendChild(createdCol)
+                    tableRow.appendChild(networksCol)
+                    tableRow.appendChild(wigleCol)
+                    tableRow.appendChild(actionsCol)
+                    sessionsTable.appendChild(tableRow)
+                }
+            })
+        }
+        function showNetworks() {
+            updateContainerView("networks")
+            request('GET', "/plugins/wardriver/networks", function(data) {
+                $('#networks-table-container').DataTable({
+                    data: data,
+                    searching: false,
+                    lengthChange: false,
+                    pageLength: 30,
+                    columns: [
+                        { data: "id" },
+                        { data: "mac" },
+                        { data: "ssid" },
+                        { data: "first_seen" },
+                        { data: "first_session" },
+                        { data: "last_seen" },
+                        { data: "last_session" },
+                        { data: "sessions_count" }
+                    ]
+                });
+            })
+        }
+        function showMap() {
+            updateContainerView("map")
+        }
+        function setupMenuClickListeners() {
+            document.getElementById("menu-current-session").addEventListener("click", showCurrentSession)
+            document.getElementById("menu-stats").addEventListener("click", showStats)
+            document.getElementById("menu-sessions").addEventListener("click", showSessions)
+            document.getElementById("menu-networks").addEventListener("click", showNetworks)
+            document.getElementById("menu-map").addEventListener("click", showMap)
+        }
+    })()
+{% endblock %}
+'''
