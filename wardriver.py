@@ -812,6 +812,40 @@ HTML_PAGE = '''
                 alert(message.status)
             })
         }
+
+        function getCurrentSessionStats() {
+            request('GET', "/plugins/wardriver/current-session", function(data) {
+                document.getElementById("current-session-id").innerHTML = data.id
+                document.getElementById("current-session-networks").innerHTML = data.networks
+                document.getElementById("current-session-last-update").innerHTML = data.last_ap_refresh ? "<time class='timeago' datetime='" + parseUTCDate(data.last_ap_refresh).toISOString() + "'>-</time>" : "-"
+                var sessionStartDate = parseUTCDate(data.created_at)
+                document.getElementById("current-session-start").innerHTML = ("0" + sessionStartDate.getHours()).slice(-2) + ":" + ("0" + sessionStartDate.getMinutes()).slice(-2)
+                var apTable = document.getElementById("current-session-table")
+                apTable.innerHTML = ""
+                for(var network of data.last_ap_reported) {
+                    var tableRow = document.createElement('tr')
+                    var macCol = document.createElement('td')
+                    var ssidCol = document.createElement('td')
+                    var channelCol = document.createElement('td')
+                    var rssiCol = document.createElement('td')
+                    var capabilitiesCol = document.createElement('td')
+                    macCol.innerText = network.mac
+                    ssidCol.innerText = network.ssid
+                    channelCol.innerText = network.channel
+                    rssiCol.innerText = network.rssi
+                    capabilitiesCol.innerText = network.capabilities
+                    tableRow.appendChild(macCol)
+                    tableRow.appendChild(ssidCol)
+                    tableRow.appendChild(channelCol)
+                    tableRow.appendChild(rssiCol)
+                    tableRow.appendChild(capabilitiesCol)
+                    apTable.appendChild(tableRow)
+                }
+                jQuery("time.timeago").timeago();
+            })
+        }
+
+        setInterval(getCurrentSessionStats, 30 * 1000) // refresh current session data every 30s
         
         // Make HTTP request to pwnagotchi "server"
         function request(method, url, callback) {
@@ -865,35 +899,7 @@ HTML_PAGE = '''
         }
         function showCurrentSession() {
             updateContainerView("current-session")
-            request('GET', "/plugins/wardriver/current-session", function(data) {
-                document.getElementById("current-session-id").innerHTML = data.id
-                document.getElementById("current-session-networks").innerHTML = data.networks
-                document.getElementById("current-session-last-update").innerHTML = data.last_ap_refresh ? "<time class='timeago' datetime='" + parseUTCDate(data.last_ap_refresh).toISOString() + "'>-</time>" : "-"
-                var sessionStartDate = parseUTCDate(data.created_at)
-                document.getElementById("current-session-start").innerHTML = ("0" + sessionStartDate.getHours()).slice(-2) + ":" + ("0" + sessionStartDate.getMinutes()).slice(-2)
-                var apTable = document.getElementById("current-session-table")
-                apTable.innerHTML = ""
-                for(var network of data.last_ap_reported) {
-                    var tableRow = document.createElement('tr')
-                    var macCol = document.createElement('td')
-                    var ssidCol = document.createElement('td')
-                    var channelCol = document.createElement('td')
-                    var rssiCol = document.createElement('td')
-                    var capabilitiesCol = document.createElement('td')
-                    macCol.innerText = network.mac
-                    ssidCol.innerText = network.ssid
-                    channelCol.innerText = network.channel
-                    rssiCol.innerText = network.rssi
-                    capabilitiesCol.innerText = network.capabilities
-                    tableRow.appendChild(macCol)
-                    tableRow.appendChild(ssidCol)
-                    tableRow.appendChild(channelCol)
-                    tableRow.appendChild(rssiCol)
-                    tableRow.appendChild(capabilitiesCol)
-                    apTable.appendChild(tableRow)
-                }
-                jQuery("time.timeago").timeago();
-            })
+            getCurrentSessionStats()
         }
         function showStats() {
             updateContainerView("stats")
