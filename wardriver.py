@@ -484,43 +484,50 @@ class Wardriver(plugins.Plugin):
         else:
             logging.warning("[WARDRIVER] GPS not available... skip wardriving log")
         
+    
+    def __upload_session_to_wigle(self, session_id):
+        if self.__wigle_api_key != '':
+            headers = {
+                'Authorization': f'Basic {self.__wigle_api_key}',
+                'Accept': 'application/json'
+            }
+            networks = self.__db.session_networks(session_id)
+            csv = self.__csv_generator.networks_to_wigle_csv(networks)
+            
+            data = {
+                'donate': 'on' if self.__wigle_donate else 'off'
+            }
+
+            file_form = {
+                'file': (f'session_{session_id}.csv', csv)
+            }
+
+            try:
+                response = requests.post(
+                    url = 'https://api.wigle.net/api/v2/file/upload',
+                    headers = headers,
+                    data = data,
+                    files = file_form,
+                    timeout = 300
+                )
+                response.raise_for_status()
+                self.__db.session_uploaded_to_wigle(session_id)
+                logging.info(f'[WARDRIVER] Uploaded successfully session with id {session_id} on WiGLE')
+                return True
+            except Exception as e:
+                logging.error(f'[WARDRIVER] Failed uploading session with id {session_id}: {e}')
+                return False
+        else:
+            return False
     def on_internet_available(self, agent):
         if self.__wigle_enabled and not self.__lock.locked():
             with self.__lock:
                 sessions_to_upload = self.__db.wigle_sessions_not_uploaded(self.__session_id)
                 if len(sessions_to_upload) > 0:
                     logging.info(f'[WARDRIVER] Uploading previous sessions on WiGLE ({len(sessions_to_upload)} sessions) - current session will not be uploaded')
-                    headers = {
-                        'Authorization': f'Basic {self.__wigle_api_key}',
-                        'Accept': 'application/json'
-                    }
 
                     for session_id in sessions_to_upload:
-                        networks = self.__db.session_networks(session_id)
-                        csv = self.__csv_generator.networks_to_wigle_csv(networks)
-                        
-                        data = {
-                            'donate': 'on' if self.__wigle_donate else 'off'
-                        }
-
-                        file_form = {
-                            'file': (f'session_{session_id}.csv', csv)
-                        }
-
-                        try:
-                            response = requests.post(
-                                url = 'https://api.wigle.net/api/v2/file/upload',
-                                headers = headers,
-                                data = data,
-                                files = file_form,
-                                timeout = 300
-                            )
-                            response.raise_for_status()
-                            self.__db.session_uploaded_to_wigle(session_id)
-                            logging.info(f'[WARDRIVER] Uploaded successfully session with id {session_id} on WiGLE')
-                        except Exception as e:
-                            logging.error(f'[WARDRIVER] Failed uploading session with id {session_id}: {e}')
-                            continue
+                        self.__upload_session_to_wigle(session_id)
     
     def on_webhook(self, path, request):
         if request.method == 'GET':
@@ -549,6 +556,11 @@ class Wardriver(plugins.Plugin):
             elif path == 'sessions':
                 sessions = self.__db.sessions()
                 return json.dumps(sessions)
+            elif 'upload/' in path:
+                session_id = path.split('/')[-1]
+                result = self.__upload_session_to_wigle(session_id)
+                logging.info(result)
+                return '{ "status": "Success" }' if result else'{ "status": "Error! Check the logs" }'
             elif path == 'networks':
                 networks = self.__db.networks()
                 return json.dumps(networks)
@@ -713,7 +725,7 @@ HTML_PAGE = '''
                     <p>Actions:<br />
                     <i class="fa-solid fa-file-csv"></i> : download session's CSV file<br />
                     <i class="fa-solid fa-cloud-arrow-up"></i> : upload session to WiGLE<br />
-                    <i class="fa-solid fa-trash"></i> : delete the session (<b>not the networks</b>)
+                    <!--<i class="fa-solid fa-trash"></i> : delete the session (<b>not the networks</b>)-->
                     </p>
                     <div class="overflow-auto">
                         <table>
@@ -790,6 +802,13 @@ HTML_PAGE = '''
 
                 // Performing a download with click 
                 a.click()
+            })
+        }
+
+        function uploadSessionsToWigle(session_id) {
+            request('GET', '/plugins/wardriver/upload/' + session_id, function(message) {
+                showSessions()
+                alert(message.status)
             })
         }
         
@@ -933,8 +952,11 @@ HTML_PAGE = '''
                     deleteIcon = document.createElement('i')
                     deleteIcon.className = 'fa-solid fa-trash'
                     actionsCol.appendChild(csvIcon)
-                    actionsCol.appendChild(wigleIcon)
-                    actionsCol.appendChild(deleteIcon)
+                    if(!session.wigle_uploaded) {
+                        wigleIcon.addEventListener("click", function(session_id) { return function() { uploadSessionsToWigle(session_id)} } (session.id))
+                        actionsCol.appendChild(wigleIcon)
+                    }
+                    //actionsCol.appendChild(deleteIcon)
                     tableRow.appendChild(idCol)
                     tableRow.appendChild(createdCol)
                     tableRow.appendChild(networksCol)
