@@ -471,6 +471,7 @@ class Wardriver(plugins.Plugin):
                         "channel": channel,
                         "rssi": rssi
                     })
+                    self.__session_reported.append((mac, ssid))
                     self.__db.add_wardrived_network(session_id = self.__session_id,
                                                     mac = mac,
                                                     ssid = ssid,
