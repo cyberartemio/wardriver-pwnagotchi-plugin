@@ -172,6 +172,25 @@ class Database():
         
         return networks
 
+    def map_networks(self):
+        cursor = self.__connection.cursor()
+        cursor.execute('SELECT n.mac, n.ssid, w.latitude, w.longitude, w.altitude, w.accuracy FROM networks n JOIN wardrive w ON n.id = w.network_id')
+        rows = cursor.fetchall()
+        networks = []
+        for row in rows:
+            mac, ssid, latitude, longitude, altitude, accuracy = row
+            networks.append({
+                "mac": mac,
+                "ssid": ssid,
+                "latitude": float(latitude),
+                "longitude": float(longitude),
+                "altitude": float(altitude),
+                "accuracy": int(accuracy)
+            })
+        cursor.close()
+        
+        return networks
+
 class CSVGenerator():
     def __init__(self):
        self.__wigle_info()
@@ -564,6 +583,9 @@ class Wardriver(plugins.Plugin):
                 return '{ "status": "Success" }' if result else'{ "status": "Error! Check the logs" }'
             elif path == 'networks':
                 networks = self.__db.networks()
+                return json.dumps(networks)
+            elif path == 'map-networks':
+                networks = self.__db.map_networks()
                 return json.dumps(networks)
             else:
                 abort(404)
