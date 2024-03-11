@@ -712,7 +712,7 @@ HTML_PAGE = '''
                             <h3>Plugin config</h3>
                             <article>
                                 <ul>
-                                    <li>WiGLE automatic uploading enabled: <span id="config-wigle">-</span></li>
+                                    <li>WiGLE automatic upload: <span id="config-wigle">-</span></li>
                                     <li>UI enabled: <span id="config-ui">-</span></li>
                                     <li>Database file path: <span id="config-db">-</span></li>
                                     <li>Whitelist networks:<ul id="config-whitelist"></ul></li>
@@ -907,7 +907,7 @@ HTML_PAGE = '''
                 document.getElementById("total-networks").innerText = data.total_networks
                 document.getElementById("total-sessions").innerText = data.total_sessions
                 document.getElementById("sessions-uploaded").innerText = data.sessions_uploaded
-                document.getElementById("config-wigle").innerText = data.config.wigle_enabled
+                document.getElementById("config-wigle").innerText = data.config.wigle_enabled ? "enabled" : "disabled"
                 document.getElementById("config-ui").innerText = data.config.ui_enabled
                 document.getElementById("config-db").innerText = data.config.db_path
                 document.getElementById("config-whitelist").innerHTML = ""
