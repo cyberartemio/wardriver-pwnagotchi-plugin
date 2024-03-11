@@ -665,7 +665,7 @@ HTML_PAGE = '''
                                 <th scope="col">Capabilities</th>
                             </thead>
                             <tbody id="current-session-table">
-
+                                <tr><td colspan="5" class="center">No networks.</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -822,25 +822,30 @@ HTML_PAGE = '''
                 document.getElementById("current-session-start").innerHTML = ("0" + sessionStartDate.getHours()).slice(-2) + ":" + ("0" + sessionStartDate.getMinutes()).slice(-2)
                 var apTable = document.getElementById("current-session-table")
                 apTable.innerHTML = ""
-                for(var network of data.last_ap_reported) {
-                    var tableRow = document.createElement('tr')
-                    var macCol = document.createElement('td')
-                    var ssidCol = document.createElement('td')
-                    var channelCol = document.createElement('td')
-                    var rssiCol = document.createElement('td')
-                    var capabilitiesCol = document.createElement('td')
-                    macCol.innerText = network.mac
-                    ssidCol.innerText = network.ssid
-                    channelCol.innerText = network.channel
-                    rssiCol.innerText = network.rssi
-                    capabilitiesCol.innerText = network.capabilities
-                    tableRow.appendChild(macCol)
-                    tableRow.appendChild(ssidCol)
-                    tableRow.appendChild(channelCol)
-                    tableRow.appendChild(rssiCol)
-                    tableRow.appendChild(capabilitiesCol)
+                var tableRow = document.createElement('tr')
+                if(data.last_ap_reported.length == 0) {
+                    tableRow.innerHTML = "<td colspan='5' class='center'>No networks.</td>"
                     apTable.appendChild(tableRow)
                 }
+                else
+                    for(var network of data.last_ap_reported) {
+                        var macCol = document.createElement('td')
+                        var ssidCol = document.createElement('td')
+                        var channelCol = document.createElement('td')
+                        var rssiCol = document.createElement('td')
+                        var capabilitiesCol = document.createElement('td')
+                        macCol.innerText = network.mac
+                        ssidCol.innerText = network.ssid
+                        channelCol.innerText = network.channel
+                        rssiCol.innerText = network.rssi
+                        capabilitiesCol.innerText = network.capabilities
+                        tableRow.appendChild(macCol)
+                        tableRow.appendChild(ssidCol)
+                        tableRow.appendChild(channelCol)
+                        tableRow.appendChild(rssiCol)
+                        tableRow.appendChild(capabilitiesCol)
+                        apTable.appendChild(tableRow)
+                    }
                 jQuery("time.timeago").timeago();
             })
         }
