@@ -620,6 +620,11 @@ HTML_PAGE = '''
             margin-top: 10px;
             margin-bottom: 30px;
         }
+        header i {
+            font-size: 20px;
+            margin-top: 5px;
+            margin-right: 10px;
+        }
         .center {
             text-align: center;
         }
@@ -634,6 +639,11 @@ HTML_PAGE = '''
         }
         #map_networks {
             height: 600px;
+        }
+        #sessions-table i {
+            cursor: pointer;
+            margin-right: 15px;
+            font-size: 16px;
         }
     </style>
 {% endblock %}
@@ -702,6 +712,7 @@ HTML_PAGE = '''
                             </tbody>
                         </table>
                     </div>
+                    <p class="center"><i>This page will refresh automatically every 30s</i></p>
                 </div>
                 <div id="stats">
                     <h3>Overall</h3>
@@ -755,7 +766,7 @@ HTML_PAGE = '''
                     </div>
                 </div>
                 <div id="sessions">
-                    <h3>Sessions</h3>
+                    <h3>Wardriving sessions</h3>
                     <p>Actions:<br />
                     <i class="fa-solid fa-file-csv"></i> : download session's CSV file<br />
                     <i class="fa-solid fa-cloud-arrow-up"></i> : upload session to WiGLE<br />
