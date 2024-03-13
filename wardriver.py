@@ -622,13 +622,16 @@ HTML_PAGE = '''
         }
         header i {
             font-size: 20px;
-            margin-top: 5px;
+            margin-top: 10px;
             margin-right: 10px;
         }
         .center {
             text-align: center;
         }
-        #menu ul li {
+        #menu {
+            margin-top: 30px;
+        }
+        #menu div p {
             cursor: pointer;
         }
         .visible {
@@ -653,21 +656,29 @@ HTML_PAGE = '''
         <header>
             <hgroup class="center">
                 <h1>Wardriver plugin</h1>
-                <p>v{{ plugin_version }} by cyberartemio</p>
+                <p>v{{ plugin_version }} by <a href="https://github.com/cyberartemio/" target="_blank">cyberartemio</a></p>
                 <a href="https://discord.gg/5vrJbbW3ve" target="_blank"><i class="fa-brands fa-discord"></i></a>
                 <a href="https://github.com/cyberartemio/wardriver-pwnagotchi-plugin" target="_blank"><i class="fa-brands fa-github"></i></a>
             </hgroup>
         </header>
         <main>
-            <nav id="menu">
-                <ul>
-                    <li id="menu-current-session"><a><i class="fa-solid fa-satellite-dish"></i> Current session</a></li>
-                    <li id="menu-stats"><a><i class="fa-solid fa-chart-line"></i> Stats</a></li>
-                    <li id="menu-sessions"><a><i class="fa-solid fa-table"></i> Sessions</a></li>
-                    <li id="menu-networks"><a><i class="fa-solid fa-wifi"></i> Networks</a></li>
-                    <li id="menu-map"><a><i class="fa-solid fa-map-location-dot"></i> Map</a></li>
-                </ul>
-            </nav>
+            <div class="grid center" id="menu">
+                <div>
+                    <p id="menu-current-session"><a><i class="fa-solid fa-satellite-dish"></i> Current session</a></p>
+                </div>
+                <div>
+                    <p id="menu-stats"><a><i class="fa-solid fa-chart-line"></i> Stats</a></p>
+                </div>
+                <div>
+                    <p id="menu-sessions"><a><i class="fa-solid fa-table"></i> Sessions</a></p>
+                </div>
+                <div>
+                    <p id="menu-networks"><a><i class="fa-solid fa-wifi"></i> Networks</a></p>
+                </div>
+                <div>
+                    <p id="menu-map"><a><i class="fa-solid fa-map-location-dot"></i> Map</a></p>
+                </div>
+            </div>
             <div id="data-container">
                 <div id="current-session">
                     <h3>Current session</h3>
@@ -697,7 +708,7 @@ HTML_PAGE = '''
                             </article>
                         </div>
                     </div>
-                    <h4>Last AP refresh networks</h4>
+                    <h4>Last APs refresh networks</h4>
                     <div class="overflow-auto">
                         <table>
                             <thead>
@@ -767,7 +778,7 @@ HTML_PAGE = '''
                 </div>
                 <div id="sessions">
                     <h3>Wardriving sessions</h3>
-                    <p>Actions:<br />
+                    <p><b>Actions:</b><br />
                     <i class="fa-solid fa-file-csv"></i> : download session's CSV file<br />
                     <i class="fa-solid fa-cloud-arrow-up"></i> : upload session to WiGLE<br />
                     <!--<i class="fa-solid fa-trash"></i> : delete the session (<b>not the networks</b>)-->
