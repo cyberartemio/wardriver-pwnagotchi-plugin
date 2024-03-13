@@ -727,28 +727,28 @@ HTML_PAGE = '''
                     </div>
                     <div class="grid">
                         <div>
-                            <h3>Your WiGLE stats</h3>
+                            <h3>Your WiGLE profile</h3>
                             <article>
                                 <ul>
-                                    <li>Username: <span id="wigle-username">-</span></li>
-                                    <li>Global rank: #<span id="wigle-rank">-</span></li>
-                                    <li>Month rank: #<span id="wigle-month-rank">-</span></li>
-                                    <li>Seen WiFi: <span id="wigle-seen-wifi"></span></li>
-                                    <li>Discovered WiFi: <span id="wigle-discovered-wifi">-</span></li>
-                                    <li>WiFi this month: <span id="wigle-current-month-wifi">-</span></li>
-                                    <li>WiFi previous month: <span id="wigle-previous-month-wifi">-</span></li>
+                                    <li><b>Username</b>: <span id="wigle-username">-</span></li>
+                                    <li><b>Global rank</b>: #<span id="wigle-rank">-</span></li>
+                                    <li><b>Month rank</b>: #<span id="wigle-month-rank">-</span></li>
+                                    <li><b>Seen WiFi</b>: <span id="wigle-seen-wifi"></span></li>
+                                    <li><b>Discovered WiFi</b>: <span id="wigle-discovered-wifi">-</span></li>
+                                    <li><b>WiFi this month</b>: <span id="wigle-current-month-wifi">-</span></li>
+                                    <li><b>WiFi previous month</b>: <span id="wigle-previous-month-wifi">-</span></li>
                                 </ul>
                                 <div id="wigle-badge" class="center"></div>
                             </article>
                         </div>
                         <div>
-                            <h3>Plugin config</h3>
+                            <h3>Current plugin config</h3>
                             <article>
                                 <ul>
-                                    <li>WiGLE automatic upload: <span id="config-wigle">-</span></li>
-                                    <li>UI enabled: <span id="config-ui">-</span></li>
-                                    <li>Database file path: <span id="config-db">-</span></li>
-                                    <li>Whitelist networks:<ul id="config-whitelist"></ul></li>
+                                    <li><b>WiGLE automatic upload</b>: <span id="config-wigle">-</span></li>
+                                    <li><b>UI enabled</b>: <span id="config-ui">-</span></li>
+                                    <li><b>Database file path</b>: <span id="config-db">-</span></li>
+                                    <li><b>Whitelist networks</b>:<ul id="config-whitelist"></ul></li>
                                 </ul>
                             </article>
                         </div>
@@ -797,7 +797,8 @@ HTML_PAGE = '''
                     </div>
                 </div>
                 <div id="map">
-                    <h3>Map</h3>
+                    <h3>Networks map</h3>
+                    <p class="center"><i><i class="fa-solid fa-lightbulb"></i> Tip: click on a point to see the networks discovered there</i></p>
                     <div id="map_networks"></div>
                 </div>
             </div>
@@ -1023,7 +1024,7 @@ HTML_PAGE = '''
                     data: data,
                     searching: false,
                     lengthChange: false,
-                    pageLength: 30,
+                    pageLength: 25,
                     columns: [
                         { data: "id" },
                         { data: "mac" },
