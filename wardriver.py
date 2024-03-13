@@ -607,11 +607,19 @@ HTML_PAGE = '''
         href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
     />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin=""/>
+
 {% endblock %}
 
 {% block styles %}
 {{ super() }}
     <style>
+        .container {
+            margin-top: 10px;
+            margin-bottom: 30px;
+        }
         .center {
             text-align: center;
         }
@@ -623,6 +631,9 @@ HTML_PAGE = '''
         }
         .hidden {
             display: none;
+        }
+        #map_networks {
+            height: 600px;
         }
     </style>
 {% endblock %}
@@ -787,7 +798,7 @@ HTML_PAGE = '''
                 </div>
                 <div id="map">
                     <h3>Map</h3>
-                    <p>Soon...</p>
+                    <div id="map_networks"></div>
                 </div>
             </div>
         </main>
@@ -800,11 +811,16 @@ HTML_PAGE = '''
     </script>
     <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>-->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.21/js/jquery.dataTables.min.js" integrity="sha512-BkpSL20WETFylMrcirBahHfSnY++H2O1W+UnEEO4yNIl+jI2+zowyoGJpbtk6bx97fBXf++WJHSSK2MV4ghPcg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""></script>
+    <script src="https://unpkg.com/leaflet-canvas-marker@0.2.0"></script>
     <script>
     (function() {
         container = document.getElementById("data-container")
         setupMenuClickListeners()
         showCurrentSession()
+        var map
 
         function downloadCSV(session_id) {
             request("GET", "/plugins/wardriver/csv/" + session_id, function(text) {
@@ -1023,6 +1039,48 @@ HTML_PAGE = '''
         }
         function showMap() {
             updateContainerView("map")
+            request('GET', '/plugins/wardriver/map-networks', function(networks) {
+                if(map)
+                    map.remove()
+                map = L.map("map_networks", { center: [51.505, -0.09], zoom: 13})
+                L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                }).addTo(map)
+                var ciLayer = L.canvasIconLayer({}).addTo(map)
+                var icon = L.icon({
+                    iconUrl: 'https://img.icons8.com/metro/26/000000/marker.png',
+                    iconSize: [20, 18],
+                    iconAnchor: [10, 9]
+                })
+
+                const networksGrouped = Object.groupBy(networks, network => {
+                    return network.latitude + ',' + network.longitude
+                })
+
+                var markers = []
+                var mapCenter
+                Object.keys(networksGrouped).forEach(key => {
+                    var networks = networksGrouped[key]
+                    var coordinates = key.split(",")
+                    if(!mapCenter)
+                        mapCenter = coordinates
+                    var popupText = ""
+                    for(var network of networks) {
+                        if(network.ssid == "")
+                            popupText += "<b>Hidden</b>"
+                        else
+                            popupText += "<b>" + network.ssid + "</b>"
+                        
+                        popupText += " (" + network.mac + ")<br />"
+                    }
+                    var marker = L.marker([coordinates[0], coordinates[1]], {icon: icon}).bindPopup(popupText)
+                    markers.push(marker)
+                })
+
+                ciLayer.addLayers(markers)
+                map.setView(mapCenter, 8)
+            })
         }
         function setupMenuClickListeners() {
             document.getElementById("menu-current-session").addEventListener("click", showCurrentSession)
