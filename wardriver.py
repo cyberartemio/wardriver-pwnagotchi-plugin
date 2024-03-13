@@ -883,13 +883,14 @@ HTML_PAGE = '''
                 document.getElementById("current-session-start").innerHTML = ("0" + sessionStartDate.getHours()).slice(-2) + ":" + ("0" + sessionStartDate.getMinutes()).slice(-2)
                 var apTable = document.getElementById("current-session-table")
                 apTable.innerHTML = ""
-                var tableRow = document.createElement('tr')
                 if(data.last_ap_reported.length == 0) {
+                    var tableRow = document.createElement('tr')
                     tableRow.innerHTML = "<td colspan='5' class='center'>No networks.</td>"
                     apTable.appendChild(tableRow)
                 }
                 else
                     for(var network of data.last_ap_reported) {
+                        var tableRow = document.createElement('tr')
                         var macCol = document.createElement('td')
                         var ssidCol = document.createElement('td')
                         var channelCol = document.createElement('td')
