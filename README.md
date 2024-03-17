@@ -5,7 +5,9 @@
  ![GitHub issues](https://img.shields.io/github/issues/cyberartemio/wardriver-pwnagotchi-plugin?style=flat-square)
  ![GitHub License](https://img.shields.io/github/license/cyberartemio/wardriver-pwnagotchi-plugin?style=flat-square)
 
-A simple plugin for wardriving on your pwnagotchi. It saves all networks seen by bettercap on files using CSV format compatible with WiGLE (not only the ones whose handshakes has been collected). Optionally, it can also automatically uploads sessions file on WiGLE and you can keep a single database file with all the networks seen (instead of one file for every wardriving session).
+A simple plugin for wardriving on your pwnagotchi. It saves all networks seen by bettercap, not only the ones whose handshakes has been collected. In this version all the operations are done through the plugin's webui. Inside of it, you can see the current wardriving session stats, global stats (including your WiGLE profile), all networks seen by your pwnagotchi and also plot the networks on map.
+
+You can still upload automatically the sessions to WiGLE, but you can also uploads them manually using the webui.
 
 <div align="center">
     <h3>Join our crew and start sailing with us! 🏴‍☠️</h3>
@@ -36,16 +38,14 @@ wget https://raw.githubusercontent.com/cyberartemio/wardriver-pwnagotchi-plugin/
 ```toml
 # Enable the plugin
 main.plugins.wardriver.enabled = true
-# Directory SQLite db will be saved
+# Path where SQLite db will be saved
 main.plugins.wardriver.path = "/root/wardriver"
-# Merge session files into a single file "wardriver_db.csv"
-main.plugins.wardriver.merge_sessions = false
 # Enable UI status text
 main.plugins.wardriver.ui.enabled = true
 # Position of UI status text
 main.plugins.wardriver.ui.position.x = 5
 main.plugins.wardriver.ui.position.y = 95
-# Enable WiGLE file uploading
+# Enable WiGLE automatic file uploading
 main.plugins.wardriver.wigle.enabled = true
 # WiGLE API key (encoded)
 main.plugins.wardriver.wigle.api_key = "xyz..."
@@ -71,23 +71,17 @@ Done! Now the plugin is installed and is working.
 
 ### 🚗 Wardriving
 
-Everytime bettercap refresh the access points list (normally every 2 minutes more or less), the plugin will log the new networks seen along with the latitude, longitude and altitude. Each time the service is restarted a new session file will be created. If you have enabled it, the plugin will display the total number of networks of the current session on the pwnagotchi display.
-
-The CSV file format used is compatible with WiGLE and in the pre-header of the file are logged the informations about your device.
+Everytime bettercap refresh the access points list (normally every 2 minutes more or less), the plugin will log the new networks seen along with the latitude, longitude and altitude. Each time the service is restarted a new session will be created. If you have enabled it, the plugin will display the total number of networks of the current session on the pwnagotchi display.
 
 If you don't want some networks to be logged, you can add the SSID inside `wardriver.whitelist` array in the config. Wardriver does not report networks whose SSID is contained within the local and global whitelist.
 
 **Note:** the SSIDs inside the `main.whitelist` array will always be ignored.
 
-If you prefer to have only one big file with all the networks that your pwnagotchi has seen so far, you can enable `wardriver.merge_sessions`. If you set this option to `true`, everytime wardriver starts, it will merge all the CSV files inside the file `wardriver_db.csv` and it will remove the single files. If you have enabled WiGLE upload, the files will be merged and deleted only when they have been uploaded to WiGLE.
-
 ### 🌐 WiGLE automatic upload
 
-If you have enabled it, once internet is available, the plugin will upload all previous session files on WiGLE. Once a file has been reported it will be marked as uploaded so it will not be sent another time to WiGLE. For marking the file, the plugin appends `_uploaded` to the corresponding file. If a file fails to upload, wardriver will retry to upload it on next sessions reporting (tipically checks and report every 5 minutes).
+If you have enabled it, once internet is available, the plugin will upload all previous session files on WiGLE. Please note that the current session will not be uploaded as it is considered still in progress. Don't worry, it'll be uploaded the next time your pwnagotchi starts with internet connection.
 
-If you have enabled sessions merge, instead of marking the file as uploaded, the plugin will add all the new networks (not the one that has already been seen) to `wardriver_db.csv` file and then it will delete the session file. In this way, you'll have only one big file with all your networks and a single file with the networks seen in the current session of wardriving.
-
-Please note that the current session file will not be uploaded as it is considered still in progress. Don't worry, it'll be uploaded the next time your pwnagotchi starts with internet connection.
+If you just want to upload sessions to WiGLE manually you can still do it. All you have to do, is configuring your api key and use the corresponding button in the sessions tab of the web ui. You can also download the CSV file locally for a specific session.
 
 ## ❤️ Contribution
 
