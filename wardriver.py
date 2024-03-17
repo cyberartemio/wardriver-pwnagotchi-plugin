@@ -1104,8 +1104,8 @@ HTML_PAGE = '''
                         popupText += " (" + network.mac + ")<br />"
                         popupCounter++
                     }
-                    if(networks.length > popupCounter - 1)
-                        popupText += '&plus;' + (networks.length - popupCounter - 1) + ' more networks'
+                    if(networks.length > popupCounter)
+                        popupText += '&plus;' + (networks.length - popupCounter) + ' more networks'
                     var marker = L.marker([coordinates[0], coordinates[1]], {icon: icon}).bindPopup(popupText)
                     markers.push(marker)
                 })
