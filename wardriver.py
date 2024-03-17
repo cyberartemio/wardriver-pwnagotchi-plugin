@@ -723,7 +723,7 @@ HTML_PAGE = '''
                             </tbody>
                         </table>
                     </div>
-                    <p class="center"><i>This page will refresh automatically every 30s</i></p>
+                    <p class="center"><i>This page will automatically refresh every 30s</i></p>
                 </div>
                 <div id="stats">
                     <h3>Overall</h3>
@@ -1078,10 +1078,13 @@ HTML_PAGE = '''
                     iconAnchor: [10, 9]
                 })
 
-                const networksGrouped = Object.groupBy(networks, network => {
-                    return network.latitude + ',' + network.longitude
-                })
-
+                var networksGrouped = networks.reduce(function (n, network) {
+                    var key = network.latitude + "," + network.longitude
+                    n[key] = n[key] || []
+                    n[key].push(network)
+                    return n
+                }, Object.create(null))
+                
                 var markers = []
                 var mapCenter
                 Object.keys(networksGrouped).forEach(key => {
@@ -1090,14 +1093,19 @@ HTML_PAGE = '''
                     if(!mapCenter)
                         mapCenter = coordinates
                     var popupText = ""
-                    for(var network of networks) {
+                    var popupCounter = 0
+                    while(popupCounter < Math.min(networks.length, 7)) {
+                        var network = networks[popupCounter]
                         if(network.ssid == "")
                             popupText += "<b>Hidden</b>"
                         else
                             popupText += "<b>" + network.ssid + "</b>"
                         
                         popupText += " (" + network.mac + ")<br />"
+                        popupCounter++
                     }
+                    if(networks.length > popupCounter - 1)
+                        popupText += '&plus;' + (networks.length - popupCounter - 1) + ' more networks'
                     var marker = L.marker([coordinates[0], coordinates[1]], {icon: icon}).bindPopup(popupText)
                     markers.push(marker)
                 })
