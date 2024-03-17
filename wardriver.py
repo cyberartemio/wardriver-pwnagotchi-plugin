@@ -1049,16 +1049,16 @@ HTML_PAGE = '''
                     lengthChange: false,
                     pageLength: 25,
                     columns: [
-                        { data: "id" },
-                        { data: "mac" },
-                        { data: "ssid" },
-                        { data: "first_seen" },
-                        { data: "first_session" },
-                        { data: "last_seen" },
-                        { data: "last_session" },
-                        { data: "sessions_count" }
+                        { data: "id", width: "5%" },
+                        { data: "mac", width: "15%" },
+                        { data: "ssid", width: "20%" },
+                        { data: "first_seen", width: "15%" },
+                        { data: "first_session", width: "10%" },
+                        { data: "last_seen", width: "15%" },
+                        { data: "last_session", width: "10%" },
+                        { data: "sessions_count", width: "10%" }
                     ]
-                });
+                })
             })
         }
         function showMap() {
