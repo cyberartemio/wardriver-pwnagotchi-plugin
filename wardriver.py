@@ -248,7 +248,7 @@ class CSVGenerator():
         return 'MAC,SSID,AuthMode,FirstSeen,Channel,RSSI,CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,Type\n'
     
     def __csv_network(self, network):
-        return f'{network["mac"]},{network["ssid"]},{network["seen_timestamp"]},{network["channel"]},{network["rssi"]},{network["latitude"]},{network["longitude"]},{network["altitude"]},{network["accuracy"]},WIFI\n'
+        return f'{network["mac"]},{network["ssid"]},{network["auth_mode"]},{network["seen_timestamp"]},{network["channel"]},{network["rssi"]},{network["latitude"]},{network["longitude"]},{network["altitude"]},{network["accuracy"]},WIFI\n'
 
     def networks_to_csv(self, networks):
         csv = self.__csv_header()
