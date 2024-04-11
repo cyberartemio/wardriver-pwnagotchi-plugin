@@ -437,17 +437,11 @@ class Wardriver(plugins.Plugin):
     def on_ui_setup(self, ui):
         if self.__ui_enabled:
             logging.info('[WARDRIVER] Adding status text to ui')
-            ui.add_element('wardriver', LabeledValue(color = BLACK,
-                                               label = 'wardrive:',
-                                               value = "- networks" if self.__icon else "- nets",
-                                               position = self.__ui_position,
-                                               label_font = fonts.Small,
-                                               text_font = fonts.Small))
             wardriver_text_pos = (self.__ui_position[0] + 13, self.__ui_position[1]) if self.__icon else self.__ui_position
             wardriver_text_label = '' if self.__icon else 'wardrive:'
             ui.add_element('wardriver', LabeledValue(color = BLACK,
                                             label = wardriver_text_label,
-                                            value = " - ",
+                                            value = "Not started",
                                             position = wardriver_text_pos,
                                             label_font = fonts.Small,
                                             text_font = fonts.Small))
