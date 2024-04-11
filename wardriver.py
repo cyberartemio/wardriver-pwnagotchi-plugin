@@ -277,6 +277,7 @@ class Wardriver(plugins.Plugin):
         logging.info('[WARDRIVER] Plugin loaded (join the Discord server: https://discord.gg/5vrJbbW3ve)')
 
         self.__lock = Lock()
+        self.ready = False
 
         try:
             self.__path = self.options['path']
@@ -327,19 +328,23 @@ class Wardriver(plugins.Plugin):
         self.__last_ap_refresh = None
         self.__last_ap_reported = []
 
-        logging.info(f'[WARDRIVER] Saving session files inside {self.__path}')
+        logging.info(f'[WARDRIVER] Wardriver DB can be found in {self.__path}')
         
         if self.__wigle_enabled:
             logging.info('[WARDRIVER] Previous sessions will be uploaded to WiGLE once internet is available')
             logging.info('[WARDRIVER] Join the WiGLE group: search "The crew of the Black Pearl" and start wardriving with us!')
 
+        self.__session_id = -1
+
         self.__import_old_csv()
+    
+    def on_ready(self, agent):
+        if not agent.mode == 'MANU':
+            self.__session_id = self.__db.new_wardriving_session()
+            self.ready = True
 
-        self.__session_id = self.__db.new_wardriving_session()
-        self.ready = True
-
-        if len(self.__whitelist) > 0:
-            logging.info(f'[WARDRIVER] Ignoring {len(self.__whitelist)} networks')
+            if len(self.__whitelist) > 0:
+                logging.info(f'[WARDRIVER] Ignoring {len(self.__whitelist)} networks')
         
     def __load_global_whitelist(self):
         try:
@@ -504,7 +509,6 @@ class Wardriver(plugins.Plugin):
         else:
             logging.warning("[WARDRIVER] GPS not available... skip wardriving log")
         
-    
     def __upload_session_to_wigle(self, session_id):
         if self.__wigle_api_key != '':
             headers = {
@@ -539,6 +543,7 @@ class Wardriver(plugins.Plugin):
                 return False
         else:
             return False
+    
     def on_internet_available(self, agent):
         if self.__wigle_enabled and not self.__lock.locked():
             with self.__lock:
@@ -554,10 +559,19 @@ class Wardriver(plugins.Plugin):
             if path == '/' or not path:
                 return render_template_string(HTML_PAGE, plugin_version = self.__version__)
             elif path == 'current-session':
-                data = self.__db.current_session_stats(self.__session_id)
-                data['last_ap_refresh'] = self.__last_ap_refresh.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S") if self.__last_ap_refresh else None
-                data['last_ap_reported'] = self.__last_ap_reported
-                return json.dumps(data)
+                if self.__session_id == -1:
+                    return json.dumps({
+                        "id": -1,
+                        "created_at": None,
+                        "networks": None,
+                        "last_ap_refresh": None,
+                        "last_ap_reported": None
+                    })
+                else:
+                    data = self.__db.current_session_stats(self.__session_id)
+                    data['last_ap_refresh'] = self.__last_ap_refresh.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S") if self.__last_ap_refresh else None
+                    data['last_ap_reported'] = self.__last_ap_reported
+                    return json.dumps(data)
             elif path == 'general-stats':
                 stats = self.__db.general_stats()
                 stats['config'] = {
@@ -648,6 +662,16 @@ HTML_PAGE = '''
             margin-right: 15px;
             font-size: 16px;
         }
+        #manu-alert p {
+            background-color: #fff5a5;
+            padding: 10px 20px!important;
+            text-align: center;
+            margin: auto!important;
+            border-radius: var(--pico-border-radius);
+            color: #000;
+            width: fit-content!important;
+            margin-bottom: 20px!important;
+        }
     </style>
 {% endblock %}
 
@@ -682,29 +706,32 @@ HTML_PAGE = '''
             <div id="data-container">
                 <div id="current-session">
                     <h3>Current session</h3>
+                    <div id="manu-alert" class="hidden">
+                        <p><i class="fa-solid fa-triangle-exclamation"></i> Pwnagotchi is in MANU mode, therefore currently it's not scanning. Restart in AUTO/AI mode to start a new wardriving session</p>
+                    </div>
                     <div class="grid">
                         <div>
                             <article class="center">
                                 <header>Session id</header>
-                                <span id="current-session-id"></span>
+                                <span id="current-session-id">-</span>
                             </article>
                         </div>
                         <div>
                             <article class="center">
                                 <header>Started at </header>
-                                <span id="current-session-start"></span>
+                                <span id="current-session-start">-</span>
                             </article>
                         </div>
                         <div>
                             <article class="center">
                                 <header>Networks count</header>
-                                <span id="current-session-networks"></span>
+                                <span id="current-session-networks">-</span>
                             </article>
                         </div>
                         <div>
                             <article class="center">
                                 <header>Last APs refresh</header>
-                                <span id="current-session-last-update"></span>
+                                <span id="current-session-last-update">-</span>
                             </article>
                         </div>
                     </div>
@@ -876,6 +903,15 @@ HTML_PAGE = '''
 
         function getCurrentSessionStats() {
             request('GET', "/plugins/wardriver/current-session", function(data) {
+                if(data.id == -1) {
+                    document.getElementById("manu-alert").className = 'visible'
+                    document.getElementById("current-session-id").innerHTML = '-'
+                    document.getElementById("current-session-networks").innerHTML = '-'
+                    document.getElementById("current-session-last-update").innerHTML = '-'
+                    document.getElementById("current-session-start").innerHTML = '-'
+                    return
+                }
+                document.getElementById("manu-alert").className = 'hidden'
                 document.getElementById("current-session-id").innerHTML = data.id
                 document.getElementById("current-session-networks").innerHTML = data.networks
                 document.getElementById("current-session-last-update").innerHTML = data.last_ap_refresh ? "<time class='timeago' datetime='" + parseUTCDate(data.last_ap_refresh).toISOString() + "'>-</time>" : "-"
