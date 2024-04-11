@@ -32,7 +32,14 @@ cd /path/to/custom_plugins/directory
 ```
 3. Download the plugin code:
 ```sh
-wget https://raw.githubusercontent.com/cyberartemio/wardriver-pwnagotchi-plugin/main/wardriver.py
+wget https://github.com/cyberartemio/wardriver-pwnagotchi-plugin/archive/main.zip
+```
+4. Extract files and remove useless files:
+```sh
+unzip main.zip &&
+mv wardriver-pwnagotchi-plugin-main/wardriver.py . &&
+mv wardriver-pwnagotchi-plugin-main/wardriver_assets .&&
+rm -r wardriver-pwnagotchi-plugin-main main.zip
 ```
 5. Edit your configuration file (`/etc/pwnagotchi/config.toml`) and add the following:
 ```toml
@@ -42,8 +49,12 @@ main.plugins.wardriver.enabled = true
 main.plugins.wardriver.path = "/root/wardriver"
 # Enable UI status text
 main.plugins.wardriver.ui.enabled = true
+# Enable UI icon
+main.plugins.wardriver.ui.icon = true
+# Set to true if black background, false if white background
+main.plugins.wardriver.ui.icon_reverse = false
 # Position of UI status text
-main.plugins.wardriver.ui.position.x = 5
+main.plugins.wardriver.ui.position.x = 7
 main.plugins.wardriver.ui.position.y = 95
 # Enable WiGLE automatic file uploading
 main.plugins.wardriver.wigle.enabled = true
