@@ -264,7 +264,7 @@ class CSVGenerator():
 
 class Wardriver(plugins.Plugin):
     __author__ = 'CyberArtemio'
-    __version__ = '2.1'
+    __version__ = '2.2'
     __license__ = 'GPL3'
     __description__ = 'A wardriving plugin for pwnagotchi. Saves all networks seen and uploads data to WiGLE once internet is available'
 
