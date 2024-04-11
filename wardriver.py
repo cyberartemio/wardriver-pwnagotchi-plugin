@@ -4,13 +4,14 @@ import sqlite3
 import os
 from datetime import datetime, timezone
 import toml
-import pwnagotchi.plugins as plugins
-from pwnagotchi.ui.components import LabeledValue
-from pwnagotchi.ui.view import BLACK
-import pwnagotchi.ui.fonts as fonts
 from threading import Lock
 import json
 import requests
+from PIL import Image, ImageOps
+import pwnagotchi.plugins as plugins
+from pwnagotchi.ui.components import LabeledValue, Widget
+from pwnagotchi.ui.view import BLACK
+import pwnagotchi.ui.fonts as fonts
 from flask import abort
 from flask import render_template_string
 
@@ -278,6 +279,7 @@ class Wardriver(plugins.Plugin):
 
         self.__lock = Lock()
         self.ready = False
+        self.__gps_available = True
 
         try:
             self.__path = self.options['path']
@@ -288,11 +290,27 @@ class Wardriver(plugins.Plugin):
             self.__ui_enabled = self.options['ui']['enabled']
         except Exception:
             self.__ui_enabled = False
+        
+        self.__assets_path = os.path.join(os.path.dirname(__file__), "wardriver_assets")
+        if not os.path.isfile(os.path.join(self.__assets_path, 'icon_error.bmp')):
+            logging.critical('[WARDRIVER] Missing wardriver/icon_error.bmp, download it from GitHub repo')
+        if not os.path.isfile(os.path.join(self.__assets_path, 'icon_working.bmp')):
+            logging.critical('[WARDRIVER] Missing wardriver/icon_working.bmp, download it from GitHub repo')
+        
+        try:
+            self.__icon = self.options['ui']['icon']
+        except Exception:
+            self.__icon = True
+        
+        try:
+            self.__reverse = self.options['ui']['icon_reverse']
+        except Exception:
+            self.__reverse = False
 
         try:
             self.__ui_position = (self.options['ui']['position']['x'], self.options['ui']['position']['y'])
         except Exception:
-            self.__ui_position = (5, 95)
+            self.__ui_position = (7, 95)
         
         try:
             self.__whitelist = self.options['whitelist']
@@ -421,19 +439,41 @@ class Wardriver(plugins.Plugin):
             logging.info('[WARDRIVER] Adding status text to ui')
             ui.add_element('wardriver', LabeledValue(color = BLACK,
                                                label = 'wardrive:',
-                                               value = "- nets",
+                                               value = "- networks" if self.__icon else "- nets",
                                                position = self.__ui_position,
                                                label_font = fonts.Small,
                                                text_font = fonts.Small))
+            wardriver_text_pos = (self.__ui_position[0] + 13, self.__ui_position[1]) if self.__icon else self.__ui_position
+            wardriver_text_label = '' if self.__icon else 'wardrive:'
+            ui.add_element('wardriver', LabeledValue(color = BLACK,
+                                            label = wardriver_text_label,
+                                            value = " - ",
+                                            position = wardriver_text_pos,
+                                            label_font = fonts.Small,
+                                            text_font = fonts.Small))
+            
+            if self.__icon:
+                ui.add_element('wardriver_icon', WardriverIcon(path = f'{self.__assets_path}/icon_working.bmp', xy = self.__ui_position, reverse = self.__reverse))
+                self.__current_icon = 'icon_working'
 
     def on_ui_update(self, ui):
         if self.__ui_enabled and self.ready:
-            ui.set('wardriver', f'{self.__db.session_networks_count(self.__session_id)} net')
+            ui.set('wardriver', f'{self.__db.session_networks_count(self.__session_id)} {"networks" if self.__icon else "nets"}')
+            if self.__gps_available and self.__current_icon == 'icon_error':
+                ui.remove_element('wardriver_icon')
+                ui.add_element('wardriver_icon', WardriverIcon(path = f'{self.__assets_path}/icon_working.bmp', xy = self.__ui_position, reverse = self.__reverse))
+                self.__current_icon = 'icon_working'
+            elif not self.__gps_available and self.__current_icon == 'icon_working':
+                ui.remove_element('wardriver_icon')
+                ui.add_element('wardriver_icon', WardriverIcon(path = f'{self.__assets_path}/icon_error.bmp', xy = self.__ui_position, reverse = self.__reverse))
+                self.__current_icon = 'icon_error'
 
     def on_unload(self, ui):
         if self.__ui_enabled:
             with ui._lock:
                 ui.remove_element('wardriver')
+                if self.__icon:
+                    ui.remove_element('wardriver_icon')
         self.__db.disconnect()
         logging.info('[WARDRIVER] Plugin unloaded')
 
@@ -462,6 +502,7 @@ class Wardriver(plugins.Plugin):
             # avoid 0.000... measurements
             gps_data["Latitude"], gps_data["Longitude"]
         ]):
+            self.__gps_available = True
             self.__last_ap_refresh = datetime.now()
             self.__last_ap_reported = []
             coordinates = {
@@ -507,6 +548,7 @@ class Wardriver(plugins.Plugin):
                                                     altitude = coordinates['altitude'],
                                                     accuracy = coordinates['accuracy'])
         else:
+            self.__gps_available = False
             logging.warning("[WARDRIVER] GPS not available... skip wardriving log")
         
     def __upload_session_to_wigle(self, session_id):
@@ -604,6 +646,16 @@ class Wardriver(plugins.Plugin):
             else:
                 abort(404)
         abort(404)
+
+class WardriverIcon(Widget):
+    def __init__(self, path, xy, reverse, color = 0):
+        super().__init__(xy, color)
+        self.image = Image.open(path)
+        if(reverse):
+            self.image = ImageOps.invert(self.image.convert('L'))
+
+    def draw(self, canvas, drawer):
+        canvas.paste(self.image, self.xy)
 
 HTML_PAGE = '''
 {% extends "base.html" %}
