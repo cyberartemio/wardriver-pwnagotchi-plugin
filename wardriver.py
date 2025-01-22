@@ -262,6 +262,17 @@ class CSVGenerator():
         
         return pre_header + self.networks_to_csv(networks)
 
+class PwndroidClient:
+    def __init__(self, hostname='192.168.44.1', port=8080):
+        self.host = hostname
+        self.port = port
+
+    def get_coordinates(self):
+        response = requests.get(f'http://{self.host}:{self.port}')
+        response.raise_for_status()
+        return response.json()
+
+
 class Wardriver(plugins.Plugin):
     __author__ = 'CyberArtemio'
     __version__ = '2.2'
