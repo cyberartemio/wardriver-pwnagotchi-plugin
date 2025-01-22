@@ -262,6 +262,34 @@ class CSVGenerator():
         
         return pre_header + self.networks_to_csv(networks)
 
+class GpsdClient():
+    def __init__(self, host='127.0.0.1', port=2947):
+        self.host = host
+        self.port = port
+    
+    def connect(self):
+        self.__gpsd = gps.gps(mode=gps.WATCH_ENABLE)
+
+    def disconnect(self):
+        self.__gpsd.close()
+
+    def get_coordinates():
+        if self.__gpsd.read() == 0:
+            if gps.MODE_SET & self.__gpsd.valid:
+                if gps.isfinite(self.__gpsd.fix.latitude) and gps.isfinite(self.__gpsd.fix.longitude) and gps.isfinite(self.__gpsd.fix.altitude):
+                    return {
+                        'Latitude': self.__gpsd.fix.latitude,
+                        'Longitude': self.__gpsd.fix.longitude,
+                        'Altitude': self.__gpsd.fix.altitude # TODO: precision?
+                    }
+                else:
+                    return None
+            else:
+                return None
+        else:
+            return None
+
+
 class PwndroidClient:
     def __init__(self, hostname='192.168.44.1', port=8080):
         self.host = hostname
