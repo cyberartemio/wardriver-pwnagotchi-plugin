@@ -14,6 +14,11 @@ from pwnagotchi.ui.view import BLACK
 import pwnagotchi.ui.fonts as fonts
 from flask import abort
 from flask import render_template_string
+            
+try:
+    import gps
+except:
+    pass
 
 class Database():
     def __init__(self, path):
@@ -263,7 +268,10 @@ class CSVGenerator():
         return pre_header + self.networks_to_csv(networks)
 
 class GpsdClient():
-    def __init__(self, host='127.0.0.1', port=2947):
+    DEFAULT_HOST = '127.0.0.1'
+    DEFAULT_PORT = 2947
+
+    def __init__(self, host, port):
         self.host = host
         self.port = port
     
@@ -273,7 +281,7 @@ class GpsdClient():
     def disconnect(self):
         self.__gpsd.close()
 
-    def get_coordinates():
+    def get_coordinates(self):
         if self.__gpsd.read() == 0:
             if gps.MODE_SET & self.__gpsd.valid:
                 if gps.isfinite(self.__gpsd.fix.latitude) and gps.isfinite(self.__gpsd.fix.longitude) and gps.isfinite(self.__gpsd.fix.altitude):
@@ -291,8 +299,11 @@ class GpsdClient():
 
 
 class PwndroidClient:
-    def __init__(self, hostname='192.168.44.1', port=8080):
-        self.host = hostname
+    DEFAULT_HOST = '192.168.44.1'
+    DEFAULT_PORT = 8080
+
+    def __init__(self, host='192.168.44.1', port=8080):
+        self.host = host
         self.port = port
 
     def get_coordinates(self):
@@ -374,6 +385,35 @@ class Wardriver(plugins.Plugin):
                 self.__wigle_enabled = False
         except Exception:
             self.__wigle_enabled = False
+        
+        self.__gps_config = dict()
+        try:
+            self.__gps_config['method'] = self.options['gps']['method']
+            if self.__gps_config['method'] not in ['bettercap', 'gpsd', 'pwndroid']:
+                logging.critical('[WARDRIVER] Invalid GPS method provided! Switching back to bettercap (default)')
+                raise Error()
+        except:
+            self.__gps_config['method'] = 'bettercap'
+        
+        if self.__gps_config['method'] == 'gpsd':
+            try:
+                self.__gps_config['host'] = self.options['gps']['host']
+                self.__gps_config['port'] = self.options['gps']['port']
+            except:
+                self.__gps_config['host'] = GpsdClient.DEFAULT_HOST
+                self.__gps_config['port'] = GpsdClient.DEFAULT_PORT
+
+            self.__gpsd_client = GpsdClient(host=self.__gps_config['host'], port=self.__gps_config['port'])
+            self.__gpsd_client.connect() # TODO: throws exception?
+        elif self.__gps_config['method'] == 'pwndroid':
+            try:
+                self.__gps_config['host'] = self.options['gps']['host']
+                self.__gps_config['port'] = self.options['gps']['port']
+            except:
+                self.__gps_config['host'] = PwndroidClient.DEFAULT_HOST
+                self.__gps_config['port'] = PwndroidClient.DEFAULT_PORT
+            self.__pwndroid_client = PwndroidClient(self.__gps_config['host'], self.__gps_config['port']) # TODO: test reachability of pwndroid app
+
         
         if not os.path.exists(self.__path):
             os.makedirs(self.__path)
@@ -507,6 +547,8 @@ class Wardriver(plugins.Plugin):
                 ui.remove_element('wardriver')
                 if self.__icon:
                     ui.remove_element('wardriver_icon')
+        if self.__gps_config['method'] == 'gpsd':
+            self.__gpsd_client.disconnect()
         self.__db.disconnect()
         logging.info('[WARDRIVER] Plugin unloaded')
 
@@ -530,6 +572,21 @@ class Wardriver(plugins.Plugin):
 
         if not self.ready: # it is ready once the session file has been initialized with pre-header and header
             logging.error('[WARDRIVER] Plugin not ready... skip wardriving log')
+        
+        if self.__gps_config['method'] == 'gpsd':
+            try:
+                gps_data = self.__gpsd_client.get_coordinates()
+                logging.info(json.dumps(gps_data))
+            except Exception as e:
+               logging.error(f'[WARDRIVER] Failed getting GPS coordinates from GPSD: {e}') 
+               gps_data = None
+        
+        if self.__gps_config['method'] == 'pwndroid':
+            try:
+                gps_data = self.__pwndroid_client.get_coordinates()
+            except Exception as e:
+               logging.error(f'[WARDRIVER] Failed getting GPS coordinates from Pwndroid application: {e}') 
+               gps_data = None
 
         if gps_data and all([
             # avoid 0.000... measurements
