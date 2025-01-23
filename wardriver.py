@@ -711,7 +711,8 @@ class Wardriver(plugins.Plugin):
                     'whitelist': self.__whitelist,
                     'db_path': self.__path,
                     'ui_enabled': self.__ui_enabled,
-                    'wigle_api_key': self.__wigle_api_key
+                    'wigle_api_key': self.__wigle_api_key,
+                    'gps': self.__gps_config
                 }
                 return json.dumps(stats)
             elif "csv/" in path:
@@ -939,6 +940,7 @@ HTML_PAGE = '''
                                     <li><b>WiGLE automatic upload</b>: <span id="config-wigle">-</span></li>
                                     <li><b>UI enabled</b>: <span id="config-ui">-</span></li>
                                     <li><b>Database file path</b>: <span id="config-db">-</span></li>
+                                    <li><b>GPS</b>:<ul id="config-gps"></ul></li>
                                     <li><b>Whitelist networks</b>:<ul id="config-whitelist"></ul></li>
                                 </ul>
                             </article>
@@ -1164,6 +1166,18 @@ HTML_PAGE = '''
                         item.innerHTML = "<code>" + network + "</code>"
                         document.getElementById("config-whitelist").appendChild(item)
                     }
+                
+                var gps_method = document.createElement("li")
+                gps_method.innerHTML = "Method: <code>" + data.config.gps.method + "</code>"
+                document.getElementById("config-gps").appendChild(gps_method)
+                if(data.config.gps.method != "bettercap") {
+                    var host = document.createElement("li")
+                    host.innerHTML = "Host: <code>" + data.config.gps.host + "</code>"
+                    document.getElementById("config-gps").appendChild(host)
+                    var port = document.createElement("li")
+                    port.innerHTML = "Port: <code>" + data.config.gps.port + "</code>"
+                    document.getElementById("config-gps").appendChild(port)
+                }
                 
                 if(data.config.wigle_api_key) {
                     loadWigleStats(data.config.wigle_api_key, function(stats) {
