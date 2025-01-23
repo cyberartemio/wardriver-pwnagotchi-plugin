@@ -1161,7 +1161,7 @@ HTML_PAGE = '''
                 else
                     for(var network of data.config.whitelist) {
                         var item = document.createElement("li")
-                        item.innerText = network
+                        item.innerHTML = "<code>" + network + "</code>"
                         document.getElementById("config-whitelist").appendChild(item)
                     }
                 
