@@ -1166,7 +1166,8 @@ HTML_PAGE = '''
                         item.innerHTML = "<code>" + network + "</code>"
                         document.getElementById("config-whitelist").appendChild(item)
                     }
-                
+
+                document.getElementById("config-gps").innerHTML = ""
                 var gps_method = document.createElement("li")
                 gps_method.innerHTML = "Method: <code>" + data.config.gps.method + "</code>"
                 document.getElementById("config-gps").appendChild(gps_method)
