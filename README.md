@@ -123,6 +123,9 @@ main.plugins.wardriver.gps.port = 2947
 
 #### 📱 Pwndroid
 
+> [!IMPORTANT]
+> Be sure to have `websockets` pip library installed. Run `sudo apt install python3-websockets` on your pwnagotchi.
+
 If you don't have a GPS device connected to your pwnagotchi, but you want to get the position from your Android phone, then pick this method. You should have installed the Jayofelony's Pwndroid companion application.
 
 ```toml
@@ -132,7 +135,7 @@ main.plugins.wardriver.gps.method = "pwndroid"
 # OPTIONAL: add the IP address of your phone. This should be changed ONLY if you have changed the BT network addresses.
 main.plugins.wardriver.gps.host = "192.168.44.1"
 
-# OPTIONAL: add the port number where the Pwndroid webservice is listening on. This shouldn't be changed, unless the
+# OPTIONAL: add the port number where the Pwndroid websocket is listening on. This shouldn't be changed, unless the
 # application is updated with a different configuration. By default, 8080 is used
 main.plugins.wardriver.gps.port = 8080
 # ...
