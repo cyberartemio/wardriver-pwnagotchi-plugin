@@ -14,6 +14,12 @@ from pwnagotchi.ui.view import BLACK
 import pwnagotchi.ui.fonts as fonts
 from flask import abort
 from flask import render_template_string
+
+try:
+    import websockets
+    import asyncio
+except:
+    pass
             
 try:
     import gps
@@ -306,6 +312,58 @@ class PwndroidClient:
     def __init__(self, host='192.168.44.1', port=8080):
         self.host = host
         self.port = port
+        self.coordinates = {
+            'Latitude': None,
+            'Longitude': None,
+            'Altitude': None
+        }
+        self.__destroy = False
+        self.__websocket = None
+    
+    async def connect(self):
+        while not self.__websocket and not self.__destroy:
+            try:
+                self.__websocket = await websockets.connect(f'ws://{self.host}:{self.port}')
+                logging.info('[WARDRIVER] Connected to pwndroid websocket')
+                await self.__get_gps_coordinates()
+            except Exception as e:
+                logging.critical('[WARDRIVER] Failed to connect to pwndroid websocket')
+                logging.critical(e)
+                self.__websocket = None
+                await asyncio.sleep(30) # Wait 30 seconds between each retry
+    
+    async def disconnect(self):
+        if self.__websocket:
+            await self.__websocket.close()
+            logging.info('[WARDRIVER] Closed connection to pwndroid websocket')
+            self.__websocket = None
+            self.__destroy = True
+        else:
+            logging.debug('[WARDRIVER] Cannot close websocket connection. No connection estabilished')
+    
+    def is_connected(self):
+        return self.__websocket is not None
+    
+    async def __get_gps_coordinates(self):
+        while self.__websocket:
+            try:
+                message = await self.__websocket.recv()
+                data = json.loads(message)
+
+                if 'Latitude' in data and 'Longitude' in data and 'Altitude' in data:
+                    self.coordinates['Latitude'] = data['Latitude']
+                    self.coordinates['Longitude'] = data['Longitude']
+                    self.coordinates['Altitude'] = data['Altitude']
+                else:
+                    logging.debug(f'[WARDRIVER] Invalid GPS data received from websocket: {json.dumps(data)}')
+                await asyncio.sleep(5) # Sleep for 5 seconds
+            except websockets.exceptions.ConnectionClosed:
+                logging.critical('[WARDRIVER] Websocket connection closed by pwndroid application. Will try to restabilish connection')
+                self.__websocket = None
+            except json.JSONDecodeError:
+                logging.debug('[WARDRIVER] Invalid data. Cannot decode as JSON data')
+            except Exception as e:
+                logging.error(f'[WARDRIVER] Error while getting GPS position. {e}')
 
     def get_coordinates(self):
         response = requests.get(f'http://{self.host}:{self.port}')
@@ -324,6 +382,7 @@ class Wardriver(plugins.Plugin):
 
     def __init__(self):
         logging.debug('[WARDRIVER] Plugin created')
+        self.__db = None
     
     def on_loaded(self):
         logging.info('[WARDRIVER] Plugin loaded (join the Discord server: https://discord.gg/5vrJbbW3ve)')
@@ -396,26 +455,6 @@ class Wardriver(plugins.Plugin):
         except:
             self.__gps_config['method'] = 'bettercap'
         
-        if self.__gps_config['method'] == 'gpsd':
-            try:
-                self.__gps_config['host'] = self.options['gps']['host']
-                self.__gps_config['port'] = self.options['gps']['port']
-            except:
-                self.__gps_config['host'] = GpsdClient.DEFAULT_HOST
-                self.__gps_config['port'] = GpsdClient.DEFAULT_PORT
-
-            self.__gpsd_client = GpsdClient(host=self.__gps_config['host'], port=self.__gps_config['port'])
-            self.__gpsd_client.connect() # TODO: throws exception?
-        elif self.__gps_config['method'] == 'pwndroid':
-            try:
-                self.__gps_config['host'] = self.options['gps']['host']
-                self.__gps_config['port'] = self.options['gps']['port']
-            except:
-                self.__gps_config['host'] = PwndroidClient.DEFAULT_HOST
-                self.__gps_config['port'] = PwndroidClient.DEFAULT_PORT
-            self.__pwndroid_client = PwndroidClient(self.__gps_config['host'], self.__gps_config['port']) # TODO: test reachability of pwndroid app
-
-        
         if not os.path.exists(self.__path):
             os.makedirs(self.__path)
             logging.warning('[WARDRIVER] Created db directory')
@@ -435,9 +474,31 @@ class Wardriver(plugins.Plugin):
         self.__session_id = -1
 
         self.__import_old_csv()
+        
+        if self.__gps_config['method'] == 'gpsd':
+            try:
+                self.__gps_config['host'] = self.options['gps']['host']
+                self.__gps_config['port'] = self.options['gps']['port']
+            except:
+                self.__gps_config['host'] = GpsdClient.DEFAULT_HOST
+                self.__gps_config['port'] = GpsdClient.DEFAULT_PORT
+
+            self.__gpsd_client = GpsdClient(host=self.__gps_config['host'], port=self.__gps_config['port'])
+            self.__gpsd_client.connect() # TODO: throws exception?
+        elif self.__gps_config['method'] == 'pwndroid':
+            try:
+                self.__gps_config['host'] = self.options['gps']['host']
+                self.__gps_config['port'] = self.options['gps']['port']
+            except:
+                self.__gps_config['host'] = PwndroidClient.DEFAULT_HOST
+                self.__gps_config['port'] = PwndroidClient.DEFAULT_PORT
+            self.__pwndroid_client = PwndroidClient(self.__gps_config['host'], self.__gps_config['port'])
+            asyncio.run(self.__pwndroid_client.connect())
     
     def on_ready(self, agent):
         if not agent.mode == 'MANU':
+            while not self.__db:
+                logging.debug('[WARDRIVER] DB not ready... waiting for everything to be ready')
             self.__session_id = self.__db.new_wardriving_session()
             self.ready = True
 
@@ -550,6 +611,8 @@ class Wardriver(plugins.Plugin):
                     ui.remove_element('wardriver_icon')
         if self.__gps_config['method'] == 'gpsd':
             self.__gpsd_client.disconnect()
+        if self.__gps_config['method'] == 'pwndroid':
+            asyncio.run(self.__pwndroid_client.disconnect())
         self.__db.disconnect()
         logging.info('[WARDRIVER] Plugin unloaded')
 
@@ -568,6 +631,7 @@ class Wardriver(plugins.Plugin):
         return filtered_aps
 
     def on_unfiltered_ap_list(self, agent, aps):
+        gps_data = None
         if not self.ready: # it is ready once the session file has been initialized with pre-header and header
             logging.error('[WARDRIVER] Plugin not ready... skip wardriving log')
         
@@ -583,11 +647,8 @@ class Wardriver(plugins.Plugin):
                gps_data = None
         
         if self.__gps_config['method'] == 'pwndroid':
-            try:
-                gps_data = self.__pwndroid_client.get_coordinates()
-            except Exception as e:
-               logging.error(f'[WARDRIVER] Failed getting GPS coordinates from Pwndroid application: {e}') 
-               gps_data = None
+            if self.__pwndroid_client.is_connected():
+                gps_data = self.__pwndroid_client.coordinates
 
         if gps_data and all([
             # avoid 0.000... measurements
