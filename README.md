@@ -15,6 +15,14 @@ You can still upload automatically the sessions to WiGLE, but you can also uploa
     <p>Open <a href="https://wigle.net/stats#groupstats">https://wigle.net/stats#groupstats</a>, search for "<b>The crew of the Black Pearl</b>" and click "<code>join</code>"</p>
 </div>
 
+## ✨ Features
+- Log every network seen with its position
+- Support GPS coordinates retrieval from Bettercap, GPSD and Pwndroid application
+- Automatic and manual upload of wardriving sessions to WiGLE
+- Web UI with lots of information
+- Export single wardriving session in CSV
+- Label and icon on display with status information
+
 ## 🚀 Installation
 
 > [!IMPORTANT]
