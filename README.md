@@ -45,19 +45,24 @@ rm -r wardriver-pwnagotchi-plugin-main main.zip
 ```toml
 # Enable the plugin
 main.plugins.wardriver.enabled = true
+
 # Path where SQLite db will be saved
 main.plugins.wardriver.path = "/root/wardriver"
+
 # Enable UI status text
 main.plugins.wardriver.ui.enabled = true
 # Enable UI icon
 main.plugins.wardriver.ui.icon = true
 # Set to true if black background, false if white background
 main.plugins.wardriver.ui.icon_reverse = false
+
 # Position of UI status text
 main.plugins.wardriver.ui.position.x = 7
 main.plugins.wardriver.ui.position.y = 95
+
 # Enable WiGLE automatic file uploading
 main.plugins.wardriver.wigle.enabled = true
+
 # WiGLE API key (encoded)
 main.plugins.wardriver.wigle.api_key = "xyz..."
 # Enable commercial use of your reported data
@@ -68,6 +73,9 @@ main.plugins.wardriver.whitelist = [
     "network-2"
 ]
 # NOTE: SSIDs in main.whitelist will always be ignored
+
+# GPS configuration
+main.plugins.wardriver.gps.method = "bettercap" # or "gpsd" for gpsd or "pwndroid" for Pwndroid app
 ```
 6. Restart daemon service:
 ```sh
@@ -75,6 +83,60 @@ sudo systemctl restart pwnagotchi
 ```
 
 Done! Now the plugin is installed and is working.
+
+### 📍 GPS Configuration
+
+Starting from version v2.3, Wardriver supports different methods to retrieve the GPS position. Currently it supports:
+- **Bettercap**: getting the position directly from Bettercap's agent
+- **GPSD**: getting the position from GPSD daemon
+- **Pwndroid**: getting the position from pwndroid Android companion application
+
+Check one of the below section to understand how to configure each method for GPS position.
+
+#### 🥷 Bettercap
+
+If you are using the default gps plugin that add the GPS data to Bettercap, pick and use this method. **This is the default and the fallback choice, if you don't specify something else in the `config.toml`.**
+
+```toml
+# ...
+main.plugins.wardriver.gps.method = "bettercap"
+# ...
+```
+
+#### 🛰️ GPSD
+
+If you are using Rai's gpsdeasy plugin, pick and use this method. This should be used if you have installed gpsd on your pwnagotchi and if it is running as a daemon.
+
+```toml
+# ...
+main.plugins.wardriver.gps.method = "gpsd"
+
+# OPTIONAL: if the gpsd daemon is running on another host, specify here the IP address.
+# By default, localhost is used
+main.plugins.wardriver.gps.host = "127.0.0.1"
+
+# OPTIONAL: if the gpsd daemon is running on another host, specify here the port number.
+# By default, 2947 is used
+main.plugins.wardriver.gps.port = 2947
+# ...
+```
+
+#### 📱 Pwndroid
+
+If you don't have a GPS device connected to your pwnagotchi, but you want to get the position from your Android phone, then pick this method. You should have installed the Jayofelony's Pwndroid companion application.
+
+```toml
+# ...
+main.plugins.wardriver.gps.method = "pwndroid"
+
+# OPTIONAL: add the IP address of your phone. This should be changed ONLY if you have changed the BT network addresses.
+main.plugins.wardriver.gps.host = "192.168.44.1"
+
+# OPTIONAL: add the port number where the Pwndroid webservice is listening on. This shouldn't be changed, unless the
+# application is updated with a different configuration. By default, 8080 is used
+main.plugins.wardriver.gps.port = 8080
+# ...
+```
 
 ## ✨ Usage
 
