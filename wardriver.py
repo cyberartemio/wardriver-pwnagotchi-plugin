@@ -299,6 +299,7 @@ class GpsdClient():
 
 
 class PwndroidClient:
+    # TODO: change to WS once released in the app
     DEFAULT_HOST = '192.168.44.1'
     DEFAULT_PORT = 8080
 
@@ -567,16 +568,16 @@ class Wardriver(plugins.Plugin):
         return filtered_aps
 
     def on_unfiltered_ap_list(self, agent, aps):
-        info = agent.session()
-        gps_data = info["gps"]
-
         if not self.ready: # it is ready once the session file has been initialized with pre-header and header
             logging.error('[WARDRIVER] Plugin not ready... skip wardriving log')
         
+        if self.__gps_config['method'] == 'bettercap':
+            info = agent.session()
+            gps_data = info["gps"]
+
         if self.__gps_config['method'] == 'gpsd':
             try:
                 gps_data = self.__gpsd_client.get_coordinates()
-                logging.info(json.dumps(gps_data))
             except Exception as e:
                logging.error(f'[WARDRIVER] Failed getting GPS coordinates from GPSD: {e}') 
                gps_data = None
