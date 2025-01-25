@@ -76,6 +76,16 @@ sudo systemctl restart pwnagotchi
 
 Done! Now the plugin is installed and is working.
 
+### 🗺️ Wigle configuration
+
+In order to be able to upload your discovered networks to WiGLE, you need to register a valid API key for your account. Follow these steps to get your key:
+1. Open [https://wigle.net/account](https://wigle.net/account) and login using your WiGLE account
+2. Click on `Show my token`
+3. Copy the value for `Encoded for use:` textbox
+4. Add the value inside `main.plugins.wardriver.wigle.api_key` in `/etc/pwnagotchi/config.toml` file
+
+You are good to go. You can test if the key is working by opening the wardriver web page and clicking on `Stats` tab. If you get your WiGLE profile with your stats, the API key is working fine.
+
 ## ✨ Usage
 
 *Once configured, the plugin works autonomously and you don't have to do anything. Check the sections below to learn more about how it works.*
