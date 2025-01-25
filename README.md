@@ -5,9 +5,11 @@
  ![GitHub issues](https://img.shields.io/github/issues/cyberartemio/wardriver-pwnagotchi-plugin?style=flat-square)
  ![GitHub License](https://img.shields.io/github/license/cyberartemio/wardriver-pwnagotchi-plugin?style=flat-square)
 
-A simple plugin for wardriving on your pwnagotchi. It saves all networks seen by bettercap, not only the ones whose handshakes has been collected. In this version all the operations are done through the plugin's webui. Inside of it, you can see the current wardriving session stats, global stats (including your WiGLE profile), all networks seen by your pwnagotchi and also plot the networks on map.
+A complete plugin for wardriving on your pwnagotchi. It saves all networks seen by bettercap, not only the ones whose handshakes has been collected.
 
-You can still upload automatically the sessions to WiGLE, but you can also uploads them manually using the webui.
+All the operations are done through the plugin's Web UI. Inside of it, you can see the current wardriving session statistics, global statistics (including your WiGLE profile), all networks seen by your pwnagotchi and also plot the networks on map. You can upload automatically the sessions on WiGLE when internet is available, or upload them manually through the Web UI.
+
+**The plugin works on Evilsocket and Jayofelony images.**
 
 <div align="center">
     <h3>Join our crew and start sailing with us! 🏴‍☠️</h3>
@@ -110,7 +112,7 @@ If you don't want some networks to be logged, you can add the SSID inside `wardr
 
 If you have enabled it, once internet is available, the plugin will upload all previous session files on WiGLE. Please note that the current session will not be uploaded as it is considered still in progress. Don't worry, it'll be uploaded the next time your pwnagotchi starts with internet connection.
 
-If you just want to upload sessions to WiGLE manually you can still do it. All you have to do, is configuring your api key and use the corresponding button in the sessions tab of the web ui. You can also download the CSV file locally for a specific session.
+If you just want to upload sessions to WiGLE manually you can still do it. All you have to do, is configuring your API key and use the corresponding button in the sessions tab of the Web UI. You can also download the CSV file locally for a specific session.
 
 ## ❤️ Contribution
 
