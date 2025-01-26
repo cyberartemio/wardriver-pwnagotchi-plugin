@@ -5,11 +5,7 @@
  ![GitHub issues](https://img.shields.io/github/issues/cyberartemio/wardriver-pwnagotchi-plugin?style=for-the-badge)
  ![GitHub License](https://img.shields.io/github/license/cyberartemio/wardriver-pwnagotchi-plugin?style=for-the-badge)
 
-A complete plugin for wardriving on your pwnagotchi. It saves all networks seen by bettercap, not only the ones whose handshakes has been collected.
-
-All the operations are done through the plugin's Web UI. Inside of it, you can see the current wardriving session statistics, global statistics (including your WiGLE profile), all networks seen by your pwnagotchi and also plot the networks on map. You can upload automatically the sessions on WiGLE when internet is available, or upload them manually through the Web UI.
-
-**The plugin works on Evilsocket and Jayofelony images.**
+A complete plugin for wardriving on your pwnagotchi. It saves all networks seen by bettercap, not only the ones whose handshakes has been collected. **The plugin works on Evilsocket and Jayofelony images.**
 
 <div align="center">
     <h3>Join our crew and start sailing with us! 🏴‍☠️</h3>
@@ -100,6 +96,12 @@ You are good to go. You can test if the key is working by opening the wardriver 
 
 *Once configured, the plugin works autonomously and you don't have to do anything. Check the sections below to learn more about how it works.*
 
+### 🖥️ Web UI
+
+All the operations are done through the plugin's Web UI. Inside of it, you can see the current wardriving session statistics, global statistics (including your WiGLE profile), all networks seen by your pwnagotchi and also plot the networks on map. You can upload automatically the sessions on WiGLE when internet is available, or upload them manually through the Web UI.
+
+You can reach the Web UI by opening `http://<pwnagotchi ip>/plugins/wardriver` in your browser.
+
 ### 🚗 Wardriving
 
 Everytime bettercap refresh the access points list (normally every 2 minutes more or less), the plugin will log the new networks seen along with the latitude, longitude and altitude. Each time the service is restarted a new session will be created. If you have enabled it, the plugin will display the total number of networks of the current session on the pwnagotchi display.
@@ -108,7 +110,7 @@ If you don't want some networks to be logged, you can add the SSID inside `wardr
 
 **Note:** the SSIDs inside the `main.whitelist` array will always be ignored.
 
-### 🌐 WiGLE automatic upload
+### 🌐 WiGLE upload
 
 If you have enabled it, once internet is available, the plugin will upload all previous session files on WiGLE. Please note that the current session will not be uploaded as it is considered still in progress. Don't worry, it'll be uploaded the next time your pwnagotchi starts with internet connection.
 
