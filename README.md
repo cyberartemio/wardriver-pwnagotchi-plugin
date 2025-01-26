@@ -121,6 +121,10 @@ main.plugins.wardriver.gps.port = 2947
 # ...
 ```
 
+**Note:** If you are experiencing issues with wardriver not being able to read the GPS position from GPSD, run the following commands:
+- `sudo apt install -y gpsd gpsd-clients`: to install GPSD and GPSD clients
+- `sudo python3 -m pip install gps`: to install gps library globally. **This should be run on Evilsocket image* *
+
 #### 📱 Pwndroid
 
 > [!IMPORTANT]

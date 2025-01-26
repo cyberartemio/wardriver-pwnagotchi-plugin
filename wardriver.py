@@ -282,7 +282,7 @@ class GpsdClient():
         self.port = port
     
     def connect(self):
-        self.__gpsd = gps.gps(mode=gps.WATCH_ENABLE)
+        self.__gpsd = gps.gps(host=self.host, port=self.port, mode=gps.WATCH_ENABLE)
 
     def disconnect(self):
         self.__gpsd.close()
@@ -296,12 +296,7 @@ class GpsdClient():
                         'Longitude': self.__gpsd.fix.longitude,
                         'Altitude': self.__gpsd.fix.altitude # TODO: precision?
                     }
-                else:
-                    return None
-            else:
-                return None
-        else:
-            return None
+        return None
 
 
 class PwndroidClient:
@@ -483,8 +478,12 @@ class Wardriver(plugins.Plugin):
                 self.__gps_config['host'] = GpsdClient.DEFAULT_HOST
                 self.__gps_config['port'] = GpsdClient.DEFAULT_PORT
 
-            self.__gpsd_client = GpsdClient(host=self.__gps_config['host'], port=self.__gps_config['port'])
-            self.__gpsd_client.connect() # TODO: throws exception?
+            try:
+                self.__gpsd_client = GpsdClient(host=self.__gps_config['host'], port=self.__gps_config['port'])
+                self.__gpsd_client.connect() # TODO: throws exception?
+            except Exception as e:
+                logging.critical(f'[WARDRIVER] Failed connecting to GPSD. Falling back to bettercap (default). Error: {e}')
+                self.__gps_config['method'] = 'bettercap'
         elif self.__gps_config['method'] == 'pwndroid':
             try:
                 self.__gps_config['host'] = self.options['gps']['host']
