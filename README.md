@@ -28,7 +28,9 @@ All the operations are done through the plugin's Web UI. Inside of it, you can s
 ## 🚀 Installation
 
 > [!IMPORTANT]
-> This plugin require a GPS module attached to your pwnagotchi to work, or your pwnagotchi needs to be connected via BT to your Android phone with Pwndroid application installed. Depending on the GPS method choosen, you'll also need the `gps` or `gpsdeasy` or `pwndroid` plugin enabled. For more info about GPS configuration, check the section below.
+> This plugin require a GPS module attached to your pwnagotchi to work, or your pwnagotchi needs to be connected via BT to your Android phone with Pwndroid application installed.
+> 
+> Depending on the GPS method choosen, you'll also need the `gps` or `gpsdeasy` or `pwndroid` plugin enabled. For more info about GPS configuration, check the section below.
 
 1. Login inside your pwnagotchi using SSH:
 ```sh
