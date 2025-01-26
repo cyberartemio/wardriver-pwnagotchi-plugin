@@ -491,8 +491,12 @@ class Wardriver(plugins.Plugin):
             except:
                 self.__gps_config['host'] = PwndroidClient.DEFAULT_HOST
                 self.__gps_config['port'] = PwndroidClient.DEFAULT_PORT
-            self.__pwndroid_client = PwndroidClient(self.__gps_config['host'], self.__gps_config['port'])
-            asyncio.run(self.__pwndroid_client.connect())
+            try:
+                self.__pwndroid_client = PwndroidClient(self.__gps_config['host'], self.__gps_config['port'])
+                asyncio.run(self.__pwndroid_client.connect())
+            except Exception as e:
+                logging.critical(f'[WARDRIVER] Failed connecting to Pwndroid websocket. Falling back to bettercap (default). Error: {e}')
+                self.__gps_config['method'] = 'bettercap'
     
     def on_ready(self, agent):
         if not agent.mode == 'MANU':
