@@ -14,6 +14,14 @@ from pwnagotchi.ui.view import BLACK
 import pwnagotchi.ui.fonts as fonts
 from flask import abort
 from flask import render_template_string
+import socket
+import time
+
+try:
+    import websockets
+    import asyncio
+except:
+    pass
 
 class Database():
     def __init__(self, path):
@@ -262,9 +270,143 @@ class CSVGenerator():
         
         return pre_header + self.networks_to_csv(networks)
 
+# Credits to Rai68: https://github.com/rai68/gpsd-easy
+class GpsdClient():
+    DEFAULT_HOST = '127.0.0.1'
+    DEFAULT_PORT = 2947
+    MAX_RETRIES = 5
+
+    def __init__(self, host, port):
+        self.host = host
+        self.port = port
+        self.__gpsd_socket = None
+        self.__gpsd_stream = None
+    
+    def connect(self):
+        logging.info('[WARDRIVER] Connecting to GPSD socket')
+        for attempt in range(self.MAX_RETRIES):
+            try:
+                self.__gpsd_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.__gpsd_socket.connect((self.host, self.port))
+                self.__gpsd_stream = self.__gpsd_socket.makefile(mode="rw")
+                self.__gpsd_stream.write('?WATCH={"enable":true}\n')
+                self.__gpsd_stream.flush()
+
+                response_raw = self.__gpsd_stream.readline()
+                response = json.loads(response_raw)
+                if response['class'] != 'VERSION':
+                    raise Exception('Invalid response received from GPSD socket')
+                logging.info('[WARDRIVER] Connected to GPSD socket')
+                return
+            except Exception as e:
+                logging.error(f'[WARDRIVER] Failed connecting to GPSD socket (attempt {attempt + 1}/{self.MAX_RETRIES}): {e}')
+                time.sleep(2)
+                continue
+        raise Exception("Cannot connect to GPSD socket. Tried 5 times without success")
+
+    def disconnect(self):
+        if self.__gpsd_socket:
+            self.__gpsd_socket.close()
+            self.__gpsd_socket = None
+            self.__gpsd_stream = None
+
+    def get_coordinates(self):
+        for attempt in range(self.MAX_RETRIES):
+            try:
+                self.__gpsd_stream.write('?POLL;\n')
+                self.__gpsd_stream.flush()
+
+                response_raw = self.__gpsd_stream.readline().strip()
+                if response_raw is None or response_raw == '':
+                    continue
+
+                response = json.loads(response_raw)
+
+                if 'class' in response and response['class'] == 'POLL' and 'tpv' in response and len(response['tpv']) > 0:
+                    return {
+                        'Latitude': response['tpv'][0].get('lat', None),
+                        'Longitude': response['tpv'][0].get('lon', None),
+                        'Altitude': response['tpv'][0].get('alt', None)
+                    }
+            except:
+                logging.error('[WARDRIVER] GPSD socket error. Reconnecting...')
+                self.disconnect()
+                try:
+                    self.connect()
+                except:
+                    return None
+        return None
+
+# Credits to Jayofelony: https://github.com/jayofelony/pwnagotchi-torch-plugins/blob/main/pwndroid.py
+class PwndroidClient:
+    DEFAULT_HOST = '192.168.44.1'
+    DEFAULT_PORT = 8080
+
+    def __init__(self, host='192.168.44.1', port=8080):
+        self.host = host
+        self.port = port
+        self.coordinates = {
+            'Latitude': None,
+            'Longitude': None,
+            'Altitude': None
+        }
+        self.__destroy = False
+        self.__websocket = None
+    
+    async def connect(self):
+        while not self.__websocket and not self.__destroy:
+            try:
+                self.__websocket = await websockets.connect(f'ws://{self.host}:{self.port}')
+                logging.info('[WARDRIVER] Connected to pwndroid websocket')
+                await self.__get_gps_coordinates()
+            except Exception as e:
+                logging.critical('[WARDRIVER] Failed to connect to pwndroid websocket')
+                logging.critical(e)
+                self.__websocket = None
+                await asyncio.sleep(30) # Wait 30 seconds between each retry
+    
+    async def disconnect(self):
+        if self.__websocket:
+            await self.__websocket.close()
+            logging.info('[WARDRIVER] Closed connection to pwndroid websocket')
+            self.__websocket = None
+            self.__destroy = True
+        else:
+            logging.debug('[WARDRIVER] Cannot close websocket connection. No connection estabilished')
+    
+    def is_connected(self):
+        return self.__websocket is not None
+    
+    async def __get_gps_coordinates(self):
+        while self.__websocket:
+            try:
+                message = await self.__websocket.recv()
+                data = json.loads(message)
+
+                if 'Latitude' in data and 'Longitude' in data and 'Altitude' in data:
+                    self.coordinates['Latitude'] = data['Latitude']
+                    self.coordinates['Longitude'] = data['Longitude']
+                    self.coordinates['Altitude'] = data['Altitude']
+                else:
+                    logging.debug(f'[WARDRIVER] Invalid GPS data received from websocket: {json.dumps(data)}')
+                await asyncio.sleep(5) # Sleep for 5 seconds
+            except websockets.exceptions.ConnectionClosed:
+                logging.critical('[WARDRIVER] Websocket connection closed by pwndroid application. Will try to restabilish connection')
+                self.__websocket = None
+            except json.JSONDecodeError:
+                logging.debug('[WARDRIVER] Invalid data. Cannot decode as JSON data')
+            except Exception as e:
+                logging.error(f'[WARDRIVER] Error while getting GPS position. {e}')
+
+    def get_coordinates(self):
+        response = requests.get(f'http://{self.host}:{self.port}')
+        response.raise_for_status()
+        return response.json()
+
+
 class Wardriver(plugins.Plugin):
     __author__ = 'CyberArtemio'
-    __version__ = '2.2'
+    __version__ = '2.3'
     __license__ = 'GPL3'
     __description__ = 'A wardriving plugin for pwnagotchi. Saves all networks seen and uploads data to WiGLE once internet is available'
 
@@ -273,6 +415,7 @@ class Wardriver(plugins.Plugin):
 
     def __init__(self):
         logging.debug('[WARDRIVER] Plugin created')
+        self.__db = None
     
     def on_loaded(self):
         logging.info('[WARDRIVER] Plugin loaded (join the Discord server: https://discord.gg/5vrJbbW3ve)')
@@ -336,6 +479,15 @@ class Wardriver(plugins.Plugin):
         except Exception:
             self.__wigle_enabled = False
         
+        self.__gps_config = dict()
+        try:
+            self.__gps_config['method'] = self.options['gps']['method']
+            if self.__gps_config['method'] not in ['bettercap', 'gpsd', 'pwndroid']:
+                logging.critical('[WARDRIVER] Invalid GPS method provided! Switching back to bettercap (default)')
+                raise Error()
+        except:
+            self.__gps_config['method'] = 'bettercap'
+        
         if not os.path.exists(self.__path):
             os.makedirs(self.__path)
             logging.warning('[WARDRIVER] Created db directory')
@@ -355,9 +507,39 @@ class Wardriver(plugins.Plugin):
         self.__session_id = -1
 
         self.__import_old_csv()
+        
+        if self.__gps_config['method'] == 'gpsd':
+            try:
+                self.__gps_config['host'] = self.options['gps']['host']
+                self.__gps_config['port'] = self.options['gps']['port']
+            except:
+                self.__gps_config['host'] = GpsdClient.DEFAULT_HOST
+                self.__gps_config['port'] = GpsdClient.DEFAULT_PORT
+
+            try:
+                self.__gpsd_client = GpsdClient(host=self.__gps_config['host'], port=self.__gps_config['port'])
+                self.__gpsd_client.connect()
+            except:
+                logging.critical(f'[WARDRIVER] Failed connecting to GPSD. Falling back to bettercap (default)')
+                self.__gps_config['method'] = 'bettercap'
+        elif self.__gps_config['method'] == 'pwndroid':
+            try:
+                self.__gps_config['host'] = self.options['gps']['host']
+                self.__gps_config['port'] = self.options['gps']['port']
+            except:
+                self.__gps_config['host'] = PwndroidClient.DEFAULT_HOST
+                self.__gps_config['port'] = PwndroidClient.DEFAULT_PORT
+            try:
+                self.__pwndroid_client = PwndroidClient(self.__gps_config['host'], self.__gps_config['port'])
+                asyncio.run(self.__pwndroid_client.connect())
+            except Exception as e:
+                logging.critical(f'[WARDRIVER] Failed connecting to Pwndroid websocket. Falling back to bettercap (default). Error: {e}')
+                self.__gps_config['method'] = 'bettercap'
     
     def on_ready(self, agent):
         if not agent.mode == 'MANU':
+            while not self.__db:
+                logging.debug('[WARDRIVER] DB not ready... waiting for everything to be ready')
             self.__session_id = self.__db.new_wardriving_session()
             self.ready = True
 
@@ -451,6 +633,8 @@ class Wardriver(plugins.Plugin):
                 self.__current_icon = 'icon_working'
 
     def on_ui_update(self, ui):
+        if self.__gps_config['method'] == 'gpsd' and self.ready:
+            self.__gpsd_client.get_coordinates() # Poll to keep the socket open
         if self.__ui_enabled and self.ready:
             ui.set('wardriver', f'{self.__db.session_networks_count(self.__session_id)} {"networks" if self.__icon else "nets"}')
             if self.__gps_available and self.__current_icon == 'icon_error':
@@ -468,6 +652,10 @@ class Wardriver(plugins.Plugin):
                 ui.remove_element('wardriver')
                 if self.__icon:
                     ui.remove_element('wardriver_icon')
+        if self.__gps_config['method'] == 'gpsd':
+            self.__gpsd_client.disconnect()
+        if self.__gps_config['method'] == 'pwndroid':
+            asyncio.run(self.__pwndroid_client.disconnect())
         self.__db.disconnect()
         logging.info('[WARDRIVER] Plugin unloaded')
 
@@ -486,11 +674,23 @@ class Wardriver(plugins.Plugin):
         return filtered_aps
 
     def on_unfiltered_ap_list(self, agent, aps):
-        info = agent.session()
-        gps_data = info["gps"]
-
+        gps_data = None
         if not self.ready: # it is ready once the session file has been initialized with pre-header and header
             logging.error('[WARDRIVER] Plugin not ready... skip wardriving log')
+        
+        if self.__gps_config['method'] == 'bettercap':
+            info = agent.session()
+            gps_data = info["gps"]
+
+        if self.__gps_config['method'] == 'gpsd':
+            try:
+                gps_data = self.__gpsd_client.get_coordinates()
+            except:
+               gps_data = None
+        
+        if self.__gps_config['method'] == 'pwndroid':
+            if self.__pwndroid_client.is_connected():
+                gps_data = self.__pwndroid_client.coordinates
 
         if gps_data and all([
             # avoid 0.000... measurements
@@ -615,7 +815,8 @@ class Wardriver(plugins.Plugin):
                     'whitelist': self.__whitelist,
                     'db_path': self.__path,
                     'ui_enabled': self.__ui_enabled,
-                    'wigle_api_key': self.__wigle_api_key
+                    'wigle_api_key': self.__wigle_api_key,
+                    'gps': self.__gps_config
                 }
                 return json.dumps(stats)
             elif "csv/" in path:
@@ -843,6 +1044,7 @@ HTML_PAGE = '''
                                     <li><b>WiGLE automatic upload</b>: <span id="config-wigle">-</span></li>
                                     <li><b>UI enabled</b>: <span id="config-ui">-</span></li>
                                     <li><b>Database file path</b>: <span id="config-db">-</span></li>
+                                    <li><b>GPS</b>:<ul id="config-gps"></ul></li>
                                     <li><b>Whitelist networks</b>:<ul id="config-whitelist"></ul></li>
                                 </ul>
                             </article>
@@ -1065,9 +1267,22 @@ HTML_PAGE = '''
                 else
                     for(var network of data.config.whitelist) {
                         var item = document.createElement("li")
-                        item.innerText = network
+                        item.innerHTML = "<code>" + network + "</code>"
                         document.getElementById("config-whitelist").appendChild(item)
                     }
+
+                document.getElementById("config-gps").innerHTML = ""
+                var gps_method = document.createElement("li")
+                gps_method.innerHTML = "Method: <code>" + data.config.gps.method + "</code>"
+                document.getElementById("config-gps").appendChild(gps_method)
+                if(data.config.gps.method != "bettercap") {
+                    var host = document.createElement("li")
+                    host.innerHTML = "Host: <code>" + data.config.gps.host + "</code>"
+                    document.getElementById("config-gps").appendChild(host)
+                    var port = document.createElement("li")
+                    port.innerHTML = "Port: <code>" + data.config.gps.port + "</code>"
+                    document.getElementById("config-gps").appendChild(port)
+                }
                 
                 if(data.config.wigle_api_key) {
                     loadWigleStats(data.config.wigle_api_key, function(stats) {
