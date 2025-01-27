@@ -105,7 +105,7 @@ main.plugins.wardriver.gps.method = "bettercap"
 
 #### 🛰️ GPSD
 
-If you are using Rai's gpsdeasy plugin, pick and use this method. This should be used if you have installed gpsd on your pwnagotchi and if it is running as a daemon.
+If you are using Rai's [gpsd-easy](https://github.com/rai68/gpsd-easy) plugin, pick and use this method. This should be used if you have installed gpsd on your pwnagotchi and if it is running as a daemon.
 
 ```toml
 # ...
@@ -120,10 +120,6 @@ main.plugins.wardriver.gps.host = "127.0.0.1"
 main.plugins.wardriver.gps.port = 2947
 # ...
 ```
-
-**Note:** If you are experiencing issues with wardriver not being able to read the GPS position from GPSD, run the following commands:
-- `sudo apt install -y gpsd gpsd-clients`: to install GPSD and GPSD clients
-- `sudo python3 -m pip install gps`: to install gps library globally. **This should be run on Evilsocket image* *
 
 #### 📱 Pwndroid
 
@@ -168,3 +164,8 @@ If you just want to upload sessions to WiGLE manually you can still do it. All y
 If you need help or you want to suggest new ideas, you can open an issue [here](https://github.com/cyberartemio/wardriver-pwnagotchi-plugin/issues/new) or you can join my Discord server using this [invite](https://discord.gg/5vrJbbW3ve).
 
 If you want to contribute, you can fork the project and then open a pull request.
+
+## 🥇 Credits
+
+- Rai68's [gpsd-easy](https://github.com/rai68/gpsd-easy) pwnagotchi plugin for the GPSD integration
+- Jayofelony's [pwndroid](https://github.com/jayofelony/pwnagotchi-torch-plugins/blob/main/pwndroid.py) pwnagotchi plugin for the Pwndroid integration
