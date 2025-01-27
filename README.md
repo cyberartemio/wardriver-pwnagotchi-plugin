@@ -26,7 +26,7 @@ A complete plugin for wardriving on your pwnagotchi. It saves all networks seen 
 > [!IMPORTANT]
 > This plugin require a GPS module attached to your pwnagotchi to work, or your pwnagotchi needs to be connected via BT to your Android phone with Pwndroid application installed.
 > 
-> Depending on the GPS method choosen, you'll also need the `gps` or `gpsdeasy` or `pwndroid` plugin enabled. For more info about GPS configuration, check the section below.
+> Depending on the GPS method choosen, you'll also need the `gps` or `gpsdeasy` or `pwndroid` plugin enabled. For more info about GPS configuration, check the [section](#-gps-configuration) below.
 
 1. Login inside your pwnagotchi using SSH:
 ```sh
