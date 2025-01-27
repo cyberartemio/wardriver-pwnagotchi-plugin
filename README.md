@@ -1,13 +1,11 @@
 # 🛜 Wardriver Pwnagotchi plugin
 
-[![Discord server](https://img.shields.io/badge/Discord%20server-7289da?style=flat-square&logo=discord&logoColor=white)](https://discord.gg/5vrJbbW3ve)
- ![GitHub Release](https://img.shields.io/github/v/release/cyberartemio/wardriver-pwnagotchi-plugin?style=flat-square)
- ![GitHub issues](https://img.shields.io/github/issues/cyberartemio/wardriver-pwnagotchi-plugin?style=flat-square)
- ![GitHub License](https://img.shields.io/github/license/cyberartemio/wardriver-pwnagotchi-plugin?style=flat-square)
+[![Discord server](https://img.shields.io/badge/Discord%20server-7289da?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/5vrJbbW3ve)
+ ![GitHub Release](https://img.shields.io/github/v/release/cyberartemio/wardriver-pwnagotchi-plugin?style=for-the-badge)
+ ![GitHub issues](https://img.shields.io/github/issues/cyberartemio/wardriver-pwnagotchi-plugin?style=for-the-badge)
+ ![GitHub License](https://img.shields.io/github/license/cyberartemio/wardriver-pwnagotchi-plugin?style=for-the-badge)
 
-A simple plugin for wardriving on your pwnagotchi. It saves all networks seen by bettercap, not only the ones whose handshakes has been collected. In this version all the operations are done through the plugin's webui. Inside of it, you can see the current wardriving session stats, global stats (including your WiGLE profile), all networks seen by your pwnagotchi and also plot the networks on map.
-
-You can still upload automatically the sessions to WiGLE, but you can also uploads them manually using the webui.
+A complete plugin for wardriving on your pwnagotchi. It saves all networks seen by bettercap, not only the ones whose handshakes has been collected. **The plugin works on Evilsocket and Jayofelony images.**
 
 <div align="center">
     <h3>Join our crew and start sailing with us! 🏴‍☠️</h3>
@@ -15,12 +13,20 @@ You can still upload automatically the sessions to WiGLE, but you can also uploa
     <p>Open <a href="https://wigle.net/stats#groupstats">https://wigle.net/stats#groupstats</a>, search for "<b>The crew of the Black Pearl</b>" and click "<code>join</code>"</p>
 </div>
 
+## ✨ Features
+- Log every network seen with its position
+- Support GPS coordinates retrieval from Bettercap, GPSD and Pwndroid application
+- Automatic and manual upload of wardriving sessions to WiGLE
+- Web UI with lots of information
+- Export single wardriving session in CSV
+- Label and icon on display with status information
+
 ## 🚀 Installation
 
 > [!IMPORTANT]
-> This plugin requires a GPS module attached to your pwnagotchi. You also need to activate and configure the `gps` plugin (or another plugin that configures bettercap gps function).
->
-> If you want to enable WiGLE upload, you need a valid API key.
+> This plugin require a GPS module attached to your pwnagotchi to work, or your pwnagotchi needs to be connected via BT to your Android phone with Pwndroid application installed.
+> 
+> Depending on the GPS method choosen, you'll also need the `gps` or `gpsdeasy` or `pwndroid` plugin enabled. For more info about GPS configuration, check the section below.
 
 1. Login inside your pwnagotchi using SSH:
 ```sh
@@ -140,10 +146,25 @@ main.plugins.wardriver.gps.host = "192.168.44.1"
 main.plugins.wardriver.gps.port = 8080
 # ...
 ```
+### 🗺️ Wigle configuration
+
+In order to be able to upload your discovered networks to WiGLE, you need to register a valid API key for your account. Follow these steps to get your key:
+1. Open [https://wigle.net/account](https://wigle.net/account) and login using your WiGLE account
+2. Click on `Show my token`
+3. Copy the value for `Encoded for use:` textbox
+4. Add the value inside `main.plugins.wardriver.wigle.api_key` in `/etc/pwnagotchi/config.toml` file
+
+You are good to go. You can test if the key is working by opening the wardriver web page and clicking on `Stats` tab. If you get your WiGLE profile with your stats, the API key is working fine.
 
 ## ✨ Usage
 
 *Once configured, the plugin works autonomously and you don't have to do anything. Check the sections below to learn more about how it works.*
+
+### 🖥️ Web UI
+
+All the operations are done through the plugin's Web UI. Inside of it, you can see the current wardriving session statistics, global statistics (including your WiGLE profile), all networks seen by your pwnagotchi and also plot the networks on map. You can upload automatically the sessions on WiGLE when internet is available, or upload them manually through the Web UI.
+
+You can reach the Web UI by opening `http://<pwnagotchi ip>/plugins/wardriver` in your browser.
 
 ### 🚗 Wardriving
 
@@ -153,11 +174,11 @@ If you don't want some networks to be logged, you can add the SSID inside `wardr
 
 **Note:** the SSIDs inside the `main.whitelist` array will always be ignored.
 
-### 🌐 WiGLE automatic upload
+### 🌐 WiGLE upload
 
 If you have enabled it, once internet is available, the plugin will upload all previous session files on WiGLE. Please note that the current session will not be uploaded as it is considered still in progress. Don't worry, it'll be uploaded the next time your pwnagotchi starts with internet connection.
 
-If you just want to upload sessions to WiGLE manually you can still do it. All you have to do, is configuring your api key and use the corresponding button in the sessions tab of the web ui. You can also download the CSV file locally for a specific session.
+If you just want to upload sessions to WiGLE manually you can still do it. All you have to do, is configuring your API key and use the corresponding button in the sessions tab of the Web UI. You can also download the CSV file locally for a specific session.
 
 ## ❤️ Contribution
 
