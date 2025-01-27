@@ -283,7 +283,7 @@ class GpsdClient():
         self.__gpsd_stream = None
     
     def connect(self):
-        logging.info('[WARDRIVER] Connecting to GPSD socket')
+        logging.debug('[WARDRIVER] Connecting to GPSD socket')
         for attempt in range(self.MAX_RETRIES):
             try:
                 self.__gpsd_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -299,7 +299,7 @@ class GpsdClient():
                 logging.info('[WARDRIVER] Connected to GPSD socket')
                 return
             except Exception as e:
-                logging.error(f'[WARDRIVER] Failed connecting to GPSD socket (attempt {attempt + 1}/{self.MAX_RETRIES}): {e}')
+                logging.debug(f'[WARDRIVER] Failed connecting to GPSD socket (attempt {attempt + 1}/{self.MAX_RETRIES}): {e}')
                 time.sleep(2)
                 continue
         raise Exception("Cannot connect to GPSD socket. Tried 5 times without success")
@@ -361,7 +361,6 @@ class PwndroidClient:
                 await self.__get_gps_coordinates()
             except Exception as e:
                 logging.critical('[WARDRIVER] Failed to connect to pwndroid websocket')
-                logging.critical(e)
                 self.__websocket = None
                 await asyncio.sleep(30) # Wait 30 seconds between each retry
     
@@ -398,11 +397,6 @@ class PwndroidClient:
             except Exception as e:
                 logging.error(f'[WARDRIVER] Error while getting GPS position. {e}')
 
-    def get_coordinates(self):
-        response = requests.get(f'http://{self.host}:{self.port}')
-        response.raise_for_status()
-        return response.json()
-
 
 class Wardriver(plugins.Plugin):
     __author__ = 'CyberArtemio'
@@ -416,6 +410,7 @@ class Wardriver(plugins.Plugin):
     def __init__(self):
         logging.debug('[WARDRIVER] Plugin created')
         self.__db = None
+        self.__current_icon = ""
     
     def on_loaded(self):
         logging.info('[WARDRIVER] Plugin loaded (join the Discord server: https://discord.gg/5vrJbbW3ve)')
