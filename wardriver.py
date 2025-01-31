@@ -429,16 +429,18 @@ class Wardriver(plugins.Plugin):
         except Exception:
             self.__ui_enabled = False
         
-        self.__assets_path = os.path.join(os.path.dirname(__file__), "wardriver_assets")
-        if not os.path.isfile(os.path.join(self.__assets_path, 'icon_error.bmp')):
-            logging.critical('[WARDRIVER] Missing wardriver/icon_error.bmp, download it from GitHub repo')
-        if not os.path.isfile(os.path.join(self.__assets_path, 'icon_working.bmp')):
-            logging.critical('[WARDRIVER] Missing wardriver/icon_working.bmp, download it from GitHub repo')
-        
         try:
             self.__icon = self.options['ui']['icon']
         except Exception:
             self.__icon = True
+        
+        self.__assets_path = os.path.join(os.path.dirname(__file__), "wardriver_assets")
+        if not os.path.isfile(os.path.join(self.__assets_path, 'icon_error.bmp')):
+            logging.critical('[WARDRIVER] Missing wardriver/icon_error.bmp, download it from GitHub repo')
+            self.__icon = False
+        if not os.path.isfile(os.path.join(self.__assets_path, 'icon_working.bmp')):
+            logging.critical('[WARDRIVER] Missing wardriver/icon_working.bmp, download it from GitHub repo')
+            self.__icon = False
         
         try:
             self.__reverse = self.options['ui']['icon_reverse']
