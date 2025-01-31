@@ -430,12 +430,12 @@ class Wardriver(plugins.Plugin):
         logging.debug('[WARDRIVER] Plugin created')
         self.__db = None
         self.__current_icon = ""
+        self.ready = False
     
     def on_loaded(self):
         logging.info('[WARDRIVER] Plugin loaded (join the Discord server: https://discord.gg/5vrJbbW3ve)')
 
         self.__lock = Lock()
-        self.ready = False
         self.__gps_available = True
 
         try:
@@ -474,8 +474,6 @@ class Wardriver(plugins.Plugin):
         except Exception:
             self.__whitelist = []
 
-        self.__load_global_whitelist()        
-        
         try:
             self.__wigle_api_key = self.options['wigle']['api_key']
         except Exception:
@@ -514,11 +512,17 @@ class Wardriver(plugins.Plugin):
 
         logging.info(f'[WARDRIVER] Wardriver DB can be found in {self.__path}')
         
+        self.__load_global_whitelist()
+        if len(self.__whitelist) > 0:
+            logging.info(f'[WARDRIVER] Ignoring {len(self.__whitelist)} networks')
+        
         if self.__wigle_enabled:
             logging.info('[WARDRIVER] Previous sessions will be uploaded to WiGLE once internet is available')
             logging.info('[WARDRIVER] Join the WiGLE group: search "The crew of the Black Pearl" and start wardriving with us!')
 
-        self.__session_id = -1
+        self.__session_id = self.__db.new_wardriving_session()
+
+        self.ready = True
 
         if self.__gps_config['method'] == 'gpsd':
             try:
@@ -549,14 +553,7 @@ class Wardriver(plugins.Plugin):
                 self.__gps_config['method'] = 'bettercap'
     
     def on_ready(self, agent):
-        if not agent.mode == 'MANU':
-            while not self.__db:
-                logging.debug('[WARDRIVER] DB not ready... waiting for everything to be ready')
-            self.__session_id = self.__db.new_wardriving_session()
-            self.ready = True
-
-            if len(self.__whitelist) > 0:
-                logging.info(f'[WARDRIVER] Ignoring {len(self.__whitelist)} networks')
+        logging.info(f'[WARDRIVER] On ready hook. Current agent mode: {agent.mode}')
         
     def __load_global_whitelist(self):
         try:
