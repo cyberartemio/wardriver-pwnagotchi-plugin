@@ -508,7 +508,7 @@ class Wardriver(plugins.Plugin):
         
         self.__db = Database(os.path.join(self.__path, self.DATABASE_NAME))
         self.__csv_generator = CSVGenerator()
-        self.__session_reported = [] # TODO: remove
+        self.__session_reported = []
         self.__last_ap_refresh = None
         self.__last_ap_reported = []
 
@@ -520,8 +520,6 @@ class Wardriver(plugins.Plugin):
 
         self.__session_id = -1
 
-        self.__import_old_csv()
-        
         if self.__gps_config['method'] == 'gpsd':
             try:
                 self.__gps_config['host'] = self.options['gps']['host']
@@ -569,66 +567,6 @@ class Wardriver(plugins.Plugin):
                         self.__whitelist.append(ssid)
         except Exception as e:
             logging.critical('[WARDRIVER] Cannot read global config. Networks in global whitelist will NOT be ignored')
-    
-    def __import_old_csv(self):
-        '''
-        Import previous version csv files (<timestamp>.csv and wardriver_db.csv)
-        '''
-        # Import wardriver_db.csv
-        csv_db = os.path.join(self.__path, 'wardriver_db.csv')
-        if os.path.exists(csv_db):
-            logging.info(f'[WARDRIVER] Importing old {csv_db} into the db')
-            try:
-                with open(csv_db, 'r') as file:
-                    data = file.readlines()[1:]
-                    session_id = self.__db.new_wardriving_session(wigle_uploaded = True)
-                    for row in data:
-                        row = row.replace('\n', '')
-                        mac, ssid, auth_mode, seen_timestamp, channel, rssi, latitude, longitude, altitude, accuracy, entry_type = row.split(',')
-                        self.__db.add_wardrived_network(session_id = session_id,
-                                                        mac = mac,
-                                                        ssid = ssid,
-                                                        auth_mode = auth_mode,
-                                                        latitude = latitude,
-                                                        longitude = longitude,
-                                                        altitude = altitude,
-                                                        accuracy = accuracy,
-                                                        channel = channel,
-                                                        rssi = rssi,
-                                                        seen_timestamp = seen_timestamp)
-                os.remove(csv_db)
-                logging.info(f'[WARDRIVER] Successfully imported {csv_db}')
-            except Exception as e:
-                logging.error(f'[WARDRIVER] Error while importing {csv_db} file: {e}')
-        # Import all <timestamp>.csv
-        pattern = re.compile(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.csv')
-        sessions_files = [ file for file in os.listdir(self.__path) if pattern.match(file) ]
-        for session in sessions_files:
-            try:
-                session_path = os.path.join(self.__path, session)
-                logging.info(f'[WARDRIVER] Importing {session_path} into the db')
-                with open(session_path, 'r') as file:
-                    data = file.readlines()[2:]
-                    session_date = datetime.strptime(session.replace('.csv', ''), '%Y-%m-%dT%H:%M:%S')
-                    session_id = self.__db.new_wardriving_session(wigle_uploaded = True, timestamp = session_date)
-                    for row in data:
-                        row = row.replace('\n', '')
-                        mac, ssid, auth_mode, seen_timestamp, channel, rssi, latitude, longitude, altitude, accuracy, entry_type = row.split(',')
-                        self.__db.add_wardrived_network(session_id = session_id,
-                                                        mac = mac,
-                                                        ssid = ssid,
-                                                        auth_mode = auth_mode,
-                                                        latitude = latitude,
-                                                        longitude = longitude,
-                                                        altitude = altitude,
-                                                        accuracy = accuracy,
-                                                        channel = channel,
-                                                        rssi = rssi,
-                                                        seen_timestamp = seen_timestamp)
-                os.remove(session_path)
-                logging.info(f'[WARDRIVER] Successfully imported {session_path}')
-            except Exception as e:
-                logging.error(f'[WARDRIVER] Error while importing {session_path} file: {e}')
     
     def on_ui_setup(self, ui):
         if self.__ui_enabled:
