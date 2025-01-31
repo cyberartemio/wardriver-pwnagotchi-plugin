@@ -626,6 +626,7 @@ class Wardriver(plugins.Plugin):
         gps_data = None
         if not self.ready: # it is ready once the session file has been initialized with pre-header and header
             logging.error('[WARDRIVER] Plugin not ready... skip wardriving log')
+            return
         
         if self.__gps_config['method'] == 'bettercap':
             info = agent.session()
@@ -641,10 +642,7 @@ class Wardriver(plugins.Plugin):
             if self.__pwndroid_client.is_connected():
                 gps_data = self.__pwndroid_client.coordinates
 
-        if gps_data and all([
-            # avoid 0.000... measurements
-            gps_data["Latitude"], gps_data["Longitude"]
-        ]):
+        if gps_data and all([ gps_data["Latitude"], gps_data["Longitude"] ]):
             self.__gps_available = True
             self.__last_ap_refresh = datetime.now()
             self.__last_ap_reported = []
