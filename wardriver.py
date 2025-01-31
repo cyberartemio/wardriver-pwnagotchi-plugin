@@ -32,57 +32,64 @@ class Database():
     def __db_connect(self):
         logging.info('[WARDRIVER] Setting up database connection...')
         self.__connection = sqlite3.connect(self.__path, check_same_thread = False, detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
-        self.__cursor = self.__connection.cursor()
-        self.__cursor.execute('CREATE TABLE IF NOT EXISTS sessions ("id" INTEGER, "created_at" TEXT DEFAULT CURRENT_TIMESTAMP, "wigle_uploaded" INTEGER DEFAULT 0, PRIMARY KEY("id" AUTOINCREMENT))') # sessions table contains wardriving sessions
-        self.__cursor.execute('CREATE TABLE IF NOT EXISTS networks ("id" INTEGER, "mac" TEXT NOT NULL, "ssid" TEXT, PRIMARY KEY ("id" AUTOINCREMENT))') # networks table contains seen networks without coordinates/sessions info
-        self.__cursor.execute('CREATE TABLE IF NOT EXISTS wardrive ("id" INTEGER, "session_id" INTEGER NOT NULL, "network_id" INTEGER NOT NULL, "auth_mode" TEXT NOT NULL, "latitude" TEXT NOT NULL, "longitude" TEXT NOT NULL, "altitude" TEXT NOT NULL, "accuracy" INTEGER NOT NULL, "channel" INTEGER NOT NULL, "rssi" INTEGER NOT NULL, "seen_timestamp" TEXT DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY("id" AUTOINCREMENT), FOREIGN KEY("session_id") REFERENCES sessions("id"), FOREIGN KEY("network_id") REFERENCES networks("id"))') # wardrive table contains the relations between sessions and networks with timestamp and coordinates
+        cursor = self.__connection.cursor()
+        cursor.execute('CREATE TABLE IF NOT EXISTS sessions ("id" INTEGER, "created_at" TEXT DEFAULT CURRENT_TIMESTAMP, "wigle_uploaded" INTEGER DEFAULT 0, PRIMARY KEY("id" AUTOINCREMENT))') # sessions table contains wardriving sessions
+        cursor.execute('CREATE TABLE IF NOT EXISTS networks ("id" INTEGER, "mac" TEXT NOT NULL, "ssid" TEXT, PRIMARY KEY ("id" AUTOINCREMENT))') # networks table contains seen networks without coordinates/sessions info
+        cursor.execute('CREATE TABLE IF NOT EXISTS wardrive ("id" INTEGER, "session_id" INTEGER NOT NULL, "network_id" INTEGER NOT NULL, "auth_mode" TEXT NOT NULL, "latitude" TEXT NOT NULL, "longitude" TEXT NOT NULL, "altitude" TEXT NOT NULL, "accuracy" INTEGER NOT NULL, "channel" INTEGER NOT NULL, "rssi" INTEGER NOT NULL, "seen_timestamp" TEXT DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY("id" AUTOINCREMENT), FOREIGN KEY("session_id") REFERENCES sessions("id"), FOREIGN KEY("network_id") REFERENCES networks("id"))') # wardrive table contains the relations between sessions and networks with timestamp and coordinates
+        cursor.close()
         self.__connection.commit()
         logging.info('[WARDRIVER] Succesfully connected to db')
     
     def disconnect(self):
-        self.__cursor.close()
         self.__connection.commit()
         self.__connection.close()
         logging.info('[WARDRIVER] Closed db connection')
 
     def new_wardriving_session(self, timestamp = None, wigle_uploaded = False):
+        cursor = self.__connection.cursor()
         if timestamp:
-            self.__cursor.execute('INSERT INTO sessions(created_at, wigle_uploaded) VALUES (?, ?)', [timestamp, wigle_uploaded])
+            cursor.execute('INSERT INTO sessions(created_at, wigle_uploaded) VALUES (?, ?)', [timestamp, wigle_uploaded])
         else:
-            self.__cursor.execute('INSERT INTO sessions(wigle_uploaded) VALUES (?)', [wigle_uploaded]) # using default values
-        session_id = self.__cursor.lastrowid
+            cursor.execute('INSERT INTO sessions(wigle_uploaded) VALUES (?)', [wigle_uploaded]) # using default values
+        session_id = cursor.lastrowid
+        cursor.close()
         self.__connection.commit()
         return session_id
     
     def add_wardrived_network(self, session_id, mac, ssid, auth_mode, latitude, longitude, altitude, accuracy, channel, rssi, seen_timestamp = None):
-        self.__cursor.execute('SELECT id FROM networks WHERE mac = ? AND ssid = ?', [mac, ssid])
-        network = self.__cursor.fetchone()
+        cursor = self.__connection.cursor()
+        cursor.execute('SELECT id FROM networks WHERE mac = ? AND ssid = ?', [mac, ssid])
+        network = cursor.fetchone()
         network_id = network[0] if network else None
         if(not network_id):
-            self.__cursor.execute('INSERT INTO networks(mac, ssid) VALUES (?, ?)', [mac, ssid])
-            network_id = self.__cursor.lastrowid
+            cursor.execute('INSERT INTO networks(mac, ssid) VALUES (?, ?)', [mac, ssid])
+            network_id = cursor.lastrowid
         
         if seen_timestamp:
-            self.__cursor.execute('INSERT INTO wardrive(session_id, network_id, auth_mode, latitude, longitude, altitude, accuracy, channel, rssi, seen_timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [session_id, network_id, auth_mode, latitude, longitude, altitude, accuracy, channel, rssi, seen_timestamp])
+            cursor.execute('INSERT INTO wardrive(session_id, network_id, auth_mode, latitude, longitude, altitude, accuracy, channel, rssi, seen_timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [session_id, network_id, auth_mode, latitude, longitude, altitude, accuracy, channel, rssi, seen_timestamp])
         else:
-            self.__cursor.execute('INSERT INTO wardrive(session_id, network_id, auth_mode, latitude, longitude, altitude, accuracy, channel, rssi) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [session_id, network_id, auth_mode, latitude, longitude, altitude, accuracy, channel, rssi])
+            cursor.execute('INSERT INTO wardrive(session_id, network_id, auth_mode, latitude, longitude, altitude, accuracy, channel, rssi) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [session_id, network_id, auth_mode, latitude, longitude, altitude, accuracy, channel, rssi])
+        cursor.close()
         self.__connection.commit()
    
     def session_networks_count(self, session_id):
         '''
         Return the total networks count for a wardriving session given its id
         '''
-        self.__cursor.execute('SELECT COUNT(wardrive.id) FROM wardrive JOIN networks ON wardrive.network_id = networks.id WHERE wardrive.session_id = ? GROUP BY wardrive.session_id', [session_id])
-        row = self.__cursor.fetchone()
+        cursor = self.__connection.cursor()
+        cursor.execute('SELECT COUNT(wardrive.id) FROM wardrive JOIN networks ON wardrive.network_id = networks.id WHERE wardrive.session_id = ? GROUP BY wardrive.session_id', [session_id])
+        row = cursor.fetchone()
+        cursor.close()
         return row[0] if row else 0
 
     def session_networks(self, session_id):
         '''
         Return networks data for a wardriving session given its id
         '''
+        cursor = self.__connection.cursor()
         networks = []
-        self.__cursor.execute('SELECT networks.mac, networks.ssid, wardrive.auth_mode, wardrive.latitude, wardrive.longitude, wardrive.altitude, wardrive.accuracy, wardrive.channel, wardrive.rssi, wardrive.seen_timestamp FROM wardrive JOIN networks ON wardrive.network_id = networks.id WHERE wardrive.session_id = ?', [session_id])
-        rows = self.__cursor.fetchall()
+        cursor.execute('SELECT networks.mac, networks.ssid, wardrive.auth_mode, wardrive.latitude, wardrive.longitude, wardrive.altitude, wardrive.accuracy, wardrive.channel, wardrive.rssi, wardrive.seen_timestamp FROM wardrive JOIN networks ON wardrive.network_id = networks.id WHERE wardrive.session_id = ?', [session_id])
+        rows = cursor.fetchall()
         for row in rows:
             mac, ssid, auth_mode, latitude, longitude, altitude, accuracy, channel, rssi, seen_timestamp = row
             networks.append({
@@ -97,39 +104,47 @@ class Database():
                 'rssi': rssi,
                 'seen_timestamp': seen_timestamp
             })
-
+        cursor.close()
         return networks
 
     def session_uploaded_to_wigle(self, session_id):
-        self.__cursor.execute('UPDATE sessions SET "wigle_uploaded" = 1 WHERE id = ?', [session_id])
+        cursor = self.__connection.cursor()
+        cursor.execute('UPDATE sessions SET "wigle_uploaded" = 1 WHERE id = ?', [session_id])
+        cursor.close()
         self.__connection.commit()
     
     def wigle_sessions_not_uploaded(self, current_session_id):
         '''
         Return the list of ids of sessions that haven't got uploaded on WiGLE excluding `current_session_id`
         '''
+        cursor = self.__connection.cursor()
         sessions_ids = []
-        self.__cursor.execute('SELECT id FROM sessions WHERE wigle_uploaded = 0 AND id <> ?', [current_session_id])
-        rows = self.__cursor.fetchall()
+        cursor.execute('SELECT id FROM sessions WHERE wigle_uploaded = 0 AND id <> ?', [current_session_id])
+        rows = cursor.fetchall()
         for row in rows:
             sessions_ids.append(row[0])
+        cursor.close()
         return sessions_ids
 
     def remove_empty_sessions(self):
         '''
         Remove all sessions that doesn't have any network
         '''
-        self.__cursor.execute('DELETE FROM sessions WHERE sessions.id NOT IN (SELECT wardrive.session_id FROM wardrive GROUP BY wardrive.session_id)')
+        cursor = self.__connection.cursor()
+        cursor.execute('DELETE FROM sessions WHERE sessions.id NOT IN (SELECT wardrive.session_id FROM wardrive GROUP BY wardrive.session_id)')
+        cursor.close()
         self.__connection.commit()
     
     # Web UI queries
     def general_stats(self):
-        self.__cursor.execute('SELECT COUNT(id) FROM networks')
-        total_networks = self.__cursor.fetchone()[0]
-        self.__cursor.execute('SELECT COUNT(id) FROM sessions')
-        total_sessions = self.__cursor.fetchone()[0]
-        self.__cursor.execute('SELECT COUNT(id) FROM sessions WHERE wigle_uploaded = 1')
-        sessions_uploaded = self.__cursor.fetchone()[0]
+        cursor = self.__connection.cursor()
+        cursor.execute('SELECT COUNT(id) FROM networks')
+        total_networks = cursor.fetchone()[0]
+        cursor.execute('SELECT COUNT(id) FROM sessions')
+        total_sessions = cursor.fetchone()[0]
+        cursor.execute('SELECT COUNT(id) FROM sessions WHERE wigle_uploaded = 1')
+        sessions_uploaded = cursor.fetchone()[0]
+        cursor.close()
         return {
             'total_networks': total_networks,
             'total_sessions': total_sessions,
@@ -137,8 +152,9 @@ class Database():
         }
     
     def sessions(self):
-        self.__cursor.execute('SELECT sessions.*, COUNT(wardrive.id) FROM sessions JOIN wardrive ON sessions.id = wardrive.session_id GROUP BY sessions.id')
-        rows = self.__cursor.fetchall()
+        cursor = self.__connection.cursor()
+        cursor.execute('SELECT sessions.*, COUNT(wardrive.id) FROM sessions JOIN wardrive ON sessions.id = wardrive.session_id GROUP BY sessions.id')
+        rows = cursor.fetchall()
         sessions = []
         for row in rows:
             sessions.append({
@@ -147,13 +163,16 @@ class Database():
                 'wigle_uploaded': row[2] == 1,
                 'networks': row[3]
             })
+        cursor.close()
         return sessions
     
     def current_session_stats(self, session_id):
-        self.__cursor.execute('SELECT created_at FROM sessions WHERE id = ?', [session_id])
-        created_at = self.__cursor.fetchone()[0]
-        self.__cursor.execute('SELECT COUNT(id) FROM wardrive WHERE session_id = ?', [session_id])
-        networks = self.__cursor.fetchone()[0]
+        cursor = self.__connection.cursor()
+        cursor.execute('SELECT created_at FROM sessions WHERE id = ?', [session_id])
+        created_at = cursor.fetchone()[0]
+        cursor.execute('SELECT COUNT(id) FROM wardrive WHERE session_id = ?', [session_id])
+        networks = cursor.fetchone()[0]
+        cursor.close()
         return {
             "id": session_id,
             "created_at": created_at,
