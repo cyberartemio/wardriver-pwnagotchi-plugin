@@ -442,6 +442,7 @@ class Wardriver(plugins.Plugin):
         self.__current_icon = ""
         self.ready = False
         self.__downloaded_assets = True
+        self.__agent_mode = None
     
     def on_loaded(self):
         logging.info('[WARDRIVER] Plugin loaded (join the Discord server: https://discord.gg/5vrJbbW3ve)')
@@ -566,7 +567,7 @@ class Wardriver(plugins.Plugin):
                 self.__gps_config['method'] = 'bettercap'
     
     def on_ready(self, agent):
-        logging.info(f'[WARDRIVER] On ready hook. Current agent mode: {agent.mode}')
+        self.__agent_mode = agent.mode
         
     def __load_global_whitelist(self):
         try:
@@ -597,7 +598,7 @@ class Wardriver(plugins.Plugin):
     def on_ui_update(self, ui):
         if self.__gps_config['method'] == 'gpsd' and self.ready:
             self.__gpsd_client.get_coordinates() # Poll to keep the socket open
-        if self.__ui_enabled and self.ready:
+        if self.__ui_enabled and self.ready and self.__agent_mode and self.__agent_mode != "manual":
             ui.set('wardriver', f'{self.__db.session_networks_count(self.__session_id)} {"networks" if self.__icon else "nets"}')
             if self.__gps_available and self.__current_icon == 'icon_error':
                 ui.remove_element('wardriver_icon')
@@ -769,7 +770,7 @@ class Wardriver(plugins.Plugin):
             if path == '/' or not path:
                 return render_template_string(HTML_PAGE, plugin_version = self.__version__)
             elif path == 'current-session':
-                if self.__session_id == -1:
+                if not self.__agent_mode or self.__agent_mode == "manual":
                     return json.dumps({
                         "id": -1,
                         "created_at": None,
