@@ -454,7 +454,7 @@ class Wardriver(plugins.Plugin):
             self.__icon = True
         
         self.__assets_path = os.path.join(os.path.dirname(__file__), "wardriver_assets")
-        if not os.path.isfile(os.path.join(self.__assets_path, 'icon_error.bmp')):
+        os.makedirs(self.__assets_path, exist_ok=True)
             logging.critical('[WARDRIVER] Missing wardriver/icon_error.bmp, download it from GitHub repo')
             self.__icon = False
         if not os.path.isfile(os.path.join(self.__assets_path, 'icon_working.bmp')):
