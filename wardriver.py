@@ -406,12 +406,23 @@ class Wardriver(plugins.Plugin):
 
     DEFAULT_PATH = '/root/wardriver' # SQLite database default path
     DATABASE_NAME = 'wardriver.db' # SQLite database file name
+    ASSETS_URL = [
+        {
+            "name": "icon_error.bmp",
+            "url": "https://raw.githubusercontent.com/cyberartemio/wardriver-pwnagotchi-plugin/refs/heads/main/wardriver_assets/icon_error.bmp"
+        },
+        {
+            "name": "icon_working.bmp",
+            "url": "https://raw.githubusercontent.com/cyberartemio/wardriver-pwnagotchi-plugin/refs/heads/main/wardriver_assets/icon_working.bmp"
+        }
+    ]
 
     def __init__(self):
         logging.debug('[WARDRIVER] Plugin created')
         self.__db = None
         self.__current_icon = ""
         self.ready = False
+        self.__downloaded_assets = True
     
     def on_loaded(self):
         logging.info('[WARDRIVER] Plugin loaded (join the Discord server: https://discord.gg/5vrJbbW3ve)')
@@ -436,11 +447,11 @@ class Wardriver(plugins.Plugin):
         
         self.__assets_path = os.path.join(os.path.dirname(__file__), "wardriver_assets")
         os.makedirs(self.__assets_path, exist_ok=True)
-            logging.critical('[WARDRIVER] Missing wardriver/icon_error.bmp, download it from GitHub repo')
-            self.__icon = False
-        if not os.path.isfile(os.path.join(self.__assets_path, 'icon_working.bmp')):
-            logging.critical('[WARDRIVER] Missing wardriver/icon_working.bmp, download it from GitHub repo')
-            self.__icon = False
+        for asset in self.ASSETS_URL:
+            if not os.path.isfile(os.path.join(self.__assets_path, asset["name"])):
+                logging.critical(f'[WARDRIVER] Asset {asset["name"]} is missing. Once internet is available it will be downloaded from GitHub')
+                self.__downloaded_assets = False
+                self.__icon = False
         
         try:
             self.__reverse = self.options['ui']['icon_reverse']
