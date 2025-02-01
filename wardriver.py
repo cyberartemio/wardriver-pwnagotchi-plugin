@@ -441,6 +441,11 @@ class Wardriver(plugins.Plugin):
         self.ready = False
         self.__downloaded_assets = True
         self.__agent_mode = None
+        self.__last_gps = {
+            "latitude": '-',
+            "longitude": '-',
+            "altitude": '-'
+        }
     
     def on_loaded(self):
         logging.info('[WARDRIVER] Plugin loaded (join the Discord server: https://discord.gg/5vrJbbW3ve)')
@@ -663,6 +668,10 @@ class Wardriver(plugins.Plugin):
                 'accuracy': 50 # TODO: how can this be calculated?
             }
 
+            self.__last_gps['latitude'] = gps_data['Latitude']
+            self.__last_gps['longitude'] = gps_data['Longitude']
+            self.__last_gps['altitude'] = gps_data['Altitude']
+
             filtered_aps = self.__filter_whitelist_aps(aps)
             filtered_aps = self.__filter_reported_aps(filtered_aps)
             
@@ -700,6 +709,9 @@ class Wardriver(plugins.Plugin):
                                                     accuracy = coordinates['accuracy'])
         else:
             self.__gps_available = False
+            self.__last_gps['latitude'] = '-'
+            self.__last_gps['longitude'] = '-'
+            self.__last_gps['altitude'] = '-'
             logging.warning("[WARDRIVER] GPS not available... skip wardriving log")
         
     def __upload_session_to_wigle(self, session_id):
@@ -772,12 +784,14 @@ class Wardriver(plugins.Plugin):
                         "created_at": None,
                         "networks": None,
                         "last_ap_refresh": None,
-                        "last_ap_reported": None
+                        "last_ap_reported": None,
+                        'gps': self.__last_gps
                     })
                 else:
                     data = self.__db.current_session_stats(self.__session_id)
                     data['last_ap_refresh'] = self.__last_ap_refresh.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S") if self.__last_ap_refresh else None
                     data['last_ap_reported'] = self.__last_ap_reported
+                    data['gps'] = self.__last_gps
                     return json.dumps(data)
             elif path == 'general-stats':
                 stats = self.__db.general_stats()
@@ -950,6 +964,26 @@ HTML_PAGE = '''
                             <article class="center">
                                 <header>Last APs refresh</header>
                                 <span id="current-session-last-update">-</span>
+                            </article>
+                        </div>
+                    </div>
+                    <div class="grid">
+                        <div>
+                            <article class="center">
+                                <header>Latitude</header>
+                                <span id="current-session-gps-latitude">-</span>
+                            </article>
+                        </div>
+                        <div>
+                            <article class="center">
+                                <header>Longitude</header>
+                                <span id="current-session-gps-longitude">-</span>
+                            </article>
+                        </div>
+                        <div>
+                            <article class="center">
+                                <header>Altitude</header>
+                                <span id="current-session-gps-altitude">-</span>
                             </article>
                         </div>
                     </div>
@@ -1130,6 +1164,11 @@ HTML_PAGE = '''
                     document.getElementById("current-session-start").innerHTML = '-'
                     return
                 }
+
+                document.getElementById("current-session-gps-latitude").innerHTML = data.gps.latitude
+                document.getElementById("current-session-gps-longitude").innerHTML = data.gps.longitude
+                document.getElementById("current-session-gps-altitude").innerHTML = data.gps.altitude
+
                 document.getElementById("manu-alert").className = 'hidden'
                 document.getElementById("current-session-id").innerHTML = data.id
                 document.getElementById("current-session-networks").innerHTML = data.networks
