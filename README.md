@@ -32,22 +32,19 @@ A complete plugin for wardriving on your pwnagotchi. It saves all networks seen 
 ```sh
 ssh pi@10.0.0.2
 ```
-2. Go to `custom_plugins` directory where all custom plugins of your Pwnagotchi are stored:
-```sh
-cd /path/to/custom_plugins/directory
+2. Add the plugin repository to your `config.toml` file and reboot your pwnagotchi:
+```toml
+main.custom_plugins_repos = [
+    # ...
+    "https://github.com/cyberartemio/wardriver-pwnagotchi-plugin/archive/main.zip"
+]
 ```
-3. Download the plugin code:
+3. Install the plugin:
 ```sh
-wget https://github.com/cyberartemio/wardriver-pwnagotchi-plugin/archive/main.zip
+sudo pwnagotchi plugins update && \
+sudo pwnagotchi plugins install wardriver
 ```
-4. Extract files and remove useless files:
-```sh
-unzip main.zip &&
-mv wardriver-pwnagotchi-plugin-main/wardriver.py . &&
-mv wardriver-pwnagotchi-plugin-main/wardriver_assets .&&
-rm -r wardriver-pwnagotchi-plugin-main main.zip
-```
-5. Edit your configuration file (`/etc/pwnagotchi/config.toml`) and add the following:
+4. Edit your configuration file (`/etc/pwnagotchi/config.toml`) and add the following:
 ```toml
 # Enable the plugin
 main.plugins.wardriver.enabled = true
@@ -89,6 +86,8 @@ sudo systemctl restart pwnagotchi
 ```
 
 Done! Now the plugin is installed and is working.
+
+**Please note that during execution the plugin will download all the missing assets from GitHub if internet is available.** For this reason, the first time you run the plugin you'll not see any icon on your pwnagotchi's screen.
 
 ### 📍 GPS Configuration
 
