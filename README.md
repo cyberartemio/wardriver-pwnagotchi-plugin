@@ -155,7 +155,7 @@ In order to be able to upload your discovered networks to WiGLE, you need to reg
 
 You are good to go. You can test if the key is working by opening the wardriver web page and clicking on `Stats` tab. If you get your WiGLE profile with your stats, the API key is working fine.
 
-## 🔥 Upgrde
+## 🔥 Upgrade
 
 If you have installed the plugin following the method described in the [previous](#-installation) section, you can upgrade the plugin version with:
 ```shell
