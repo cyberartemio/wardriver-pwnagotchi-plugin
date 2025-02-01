@@ -293,7 +293,7 @@ class CSVGenerator():
 class GpsdClient():
     DEFAULT_HOST = '127.0.0.1'
     DEFAULT_PORT = 2947
-    MAX_RETRIES = 5
+    MAX_RETRIES = 10
 
     def __init__(self, host, port):
         self.host = host
@@ -319,9 +319,7 @@ class GpsdClient():
                 return
             except Exception as e:
                 logging.debug(f'[WARDRIVER] Failed connecting to GPSD socket (attempt {attempt + 1}/{self.MAX_RETRIES}): {e}')
-                time.sleep(2)
-                continue
-        raise Exception("Cannot connect to GPSD socket. Tried 5 times without success")
+                time.sleep(10) # Sleep 10s between each try
 
     def disconnect(self):
         if self.__gpsd_socket:
@@ -381,7 +379,7 @@ class PwndroidClient:
             except Exception as e:
                 logging.critical('[WARDRIVER] Failed to connect to pwndroid websocket')
                 self.__websocket = None
-                await asyncio.sleep(30) # Wait 30 seconds between each retry
+                await asyncio.sleep(10) # Wait 10 seconds between each retry
     
     async def disconnect(self):
         if self.__websocket:
@@ -550,8 +548,7 @@ class Wardriver(plugins.Plugin):
                 self.__gpsd_client = GpsdClient(host=self.__gps_config['host'], port=self.__gps_config['port'])
                 self.__gpsd_client.connect()
             except:
-                logging.critical(f'[WARDRIVER] Failed connecting to GPSD. Falling back to bettercap (default)')
-                self.__gps_config['method'] = 'bettercap'
+                logging.critical('[WARDRIVER] Failed connecting to GPSD. Will try again soon.')
         elif self.__gps_config['method'] == 'pwndroid':
             try:
                 self.__gps_config['host'] = self.options['gps']['host']
@@ -563,8 +560,7 @@ class Wardriver(plugins.Plugin):
                 self.__pwndroid_client = PwndroidClient(self.__gps_config['host'], self.__gps_config['port'])
                 asyncio.run(self.__pwndroid_client.connect())
             except Exception as e:
-                logging.critical(f'[WARDRIVER] Failed connecting to Pwndroid websocket. Falling back to bettercap (default). Error: {e}')
-                self.__gps_config['method'] = 'bettercap'
+                logging.critical(f'[WARDRIVER] Unexpected error while connecting to pwndroid. Error: {e}')
     
     def on_ready(self, agent):
         self.__agent_mode = agent.mode
