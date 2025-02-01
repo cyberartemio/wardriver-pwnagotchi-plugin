@@ -722,14 +722,28 @@ class Wardriver(plugins.Plugin):
             return False
     
     def on_internet_available(self, agent):
-        if self.__wigle_enabled and not self.__lock.locked():
+        if not self.__lock.locked() and self.ready:
             with self.__lock:
-                sessions_to_upload = self.__db.wigle_sessions_not_uploaded(self.__session_id)
-                if len(sessions_to_upload) > 0:
-                    logging.info(f'[WARDRIVER] Uploading previous sessions on WiGLE ({len(sessions_to_upload)} sessions) - current session will not be uploaded')
+                if not self.__downloaded_assets:
+                    logging.info(f'[WARDRIVER] Dowloading wardriver assets from Github')
+                    self.__downloaded_assets = True
+                    for asset in self.ASSETS_URL:
+                        try:
+                            response = requests.get(asset["url"])
+                            response.raise_for_status()
+                            with open(os.path.join(self.__assets_path, asset["name"]), 'wb') as f:
+                                f.write(response.content)
+                        except Exception as e:
+                            logging.error(f'[WARDRIVER] Failed downloading {asset["name"]}: {e}')
+                            self.__downloaded_assets = False
 
-                    for session_id in sessions_to_upload:
-                        self.__upload_session_to_wigle(session_id)
+                if self.__wigle_enabled:
+                    sessions_to_upload = self.__db.wigle_sessions_not_uploaded(self.__session_id)
+                    if len(sessions_to_upload) > 0:
+                        logging.info(f'[WARDRIVER] Uploading previous sessions on WiGLE ({len(sessions_to_upload)} sessions) - current session will not be uploaded')
+
+                        for session_id in sessions_to_upload:
+                            self.__upload_session_to_wigle(session_id)
     
     def on_webhook(self, path, request):
         if request.method == 'GET':
