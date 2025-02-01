@@ -159,6 +159,7 @@ You are good to go. You can test if the key is working by opening the wardriver 
 
 If you have installed the plugin following the method described in the [previous](#-installation) section, you can upgrade the plugin version with:
 ```shell
+sudo pwnagotchi plugins update && \
 sudo pwnagotchi plugins upgrade wardriver
 ```
 
