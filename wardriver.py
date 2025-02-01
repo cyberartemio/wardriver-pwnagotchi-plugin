@@ -293,7 +293,7 @@ class CSVGenerator():
 class GpsdClient():
     DEFAULT_HOST = '127.0.0.1'
     DEFAULT_PORT = 2947
-    MAX_RETRIES = 10
+    MAX_RETRIES = 5
 
     def __init__(self, host, port):
         self.host = host
@@ -319,7 +319,7 @@ class GpsdClient():
                 return
             except Exception as e:
                 logging.debug(f'[WARDRIVER] Failed connecting to GPSD socket (attempt {attempt + 1}/{self.MAX_RETRIES}): {e}')
-                time.sleep(10) # Sleep 10s between each try
+                time.sleep(5) # Sleep 5s between each try
 
     def disconnect(self):
         if self.__gpsd_socket:
