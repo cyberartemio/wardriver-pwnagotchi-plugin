@@ -155,7 +155,21 @@ In order to be able to upload your discovered networks to WiGLE, you need to reg
 
 You are good to go. You can test if the key is working by opening the wardriver web page and clicking on `Stats` tab. If you get your WiGLE profile with your stats, the API key is working fine.
 
-## ✨ Usage
+## 🔥 Upgrde
+
+If you have installed the plugin following the method described in the [previous](#-installation) section, you can upgrade the plugin version with:
+```shell
+sudo pwnagotchi plugins upgrade wardriver
+```
+
+Then restart your pwnagotchi with:
+```shell
+sudo systemctl restart pwnagotchi
+```
+
+Otherwise, if you have installed the plugin manually just download the new version from GitHub and replace the old file on your pwnagotchi.
+
+## 👾 Usage
 
 *Once configured, the plugin works autonomously and you don't have to do anything. Check the sections below to learn more about how it works.*
 
