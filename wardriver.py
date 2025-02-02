@@ -822,7 +822,19 @@ class Wardriver(plugins.Plugin):
                 return json.dumps(networks)
             elif path == 'map-networks':
                 networks = self.__db.map_networks()
-                return json.dumps(networks)
+                center = ['-', '-']
+                if self.__last_gps['latitude'] != "-" and self.__last_gps['longitude'] != "-":
+                    center[0] = self.__last_gps['latitude']
+                    center[1] = self.__last_gps['longitude']
+                elif len(networks) > 0:
+                    center[0] = networks[0]['latitude']
+                    center[1] = networks[0]['longitude']
+
+                map_data = {
+                    'center': center,
+                    'networks': networks
+                }
+                return json.dumps(map_data)
             else:
                 abort(404)
         abort(404)
@@ -1370,56 +1382,80 @@ HTML_PAGE = '''
         }
         function showMap() {
             updateContainerView("map")
-            request('GET', '/plugins/wardriver/map-networks', function(networks) {
-                if(map)
-                    map.remove()
-                map = L.map("map_networks", { center: [51.505, -0.09], zoom: 13, zoomControl: false})
-                L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    maxZoom: 19,
-                    attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                }).addTo(map)
-                var ciLayer = L.canvasIconLayer({}).addTo(map)
-                var icon = L.icon({
-                    iconUrl: 'https://img.icons8.com/metro/26/000000/marker.png',
-                    iconSize: [20, 18],
-                    iconAnchor: [10, 9]
-                })
-
-                var networksGrouped = networks.reduce(function (n, network) {
-                    var key = network.latitude + "," + network.longitude
-                    n[key] = n[key] || []
-                    n[key].push(network)
-                    return n
-                }, Object.create(null))
-                
-                var markers = []
-                var mapCenter
-                Object.keys(networksGrouped).forEach(key => {
-                    var networks = networksGrouped[key]
-                    var coordinates = key.split(",")
-                    if(!mapCenter)
-                        mapCenter = coordinates
-                    var popupText = ""
-                    var popupCounter = 0
-                    while(popupCounter < Math.min(networks.length, 7)) {
-                        var network = networks[popupCounter]
-                        if(network.ssid == "")
-                            popupText += "<b>Hidden</b>"
-                        else
-                            popupText += "<b>" + network.ssid + "</b>"
-                        
-                        popupText += " (" + network.mac + ")<br />"
-                        popupCounter++
+            request('GET', '/plugins/wardriver/map-networks', function(response) {
+                var networks = response.networks
+                var center = response.center
+                if(center[0] == "-" || center[1] == "-") {
+                    if(navigator.geolocation) {
+                        navigator.geolocation.getCurrentPosition(function(position) {
+                            center[0] = position.coords.latitude
+                            center[1] = position.coords.longitude
+                            renderMap(networks, center)
+                        }, function() {
+                            center[0] = 51.505
+                            center[1] = -0.09
+                            renderMap(networks, center)
+                        })
                     }
-                    if(networks.length > popupCounter)
-                        popupText += '&plus;' + (networks.length - popupCounter) + ' more networks'
-                    var marker = L.marker([coordinates[0], coordinates[1]], {icon: icon}).bindPopup(popupText)
-                    markers.push(marker)
-                })
-
-                ciLayer.addLayers(markers)
-                map.setView(mapCenter, 8)
+                    else {
+                        center[0] = 51.505
+                        center[1] = -0.09
+                        renderMap(networks, center)
+                    }
+                }
+                else {
+                    renderMap(networks, center)
+                }
             })
+        }
+        function renderMap(networks, center) {
+            if(map)
+                map.remove()
+            map = L.map("map_networks", { center: center, zoom: 13, zoomControl: false})
+            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            }).addTo(map)
+            var ciLayer = L.canvasIconLayer({}).addTo(map)
+            var icon = L.icon({
+                iconUrl: 'https://img.icons8.com/metro/26/000000/marker.png',
+                iconSize: [20, 18],
+                iconAnchor: [10, 9]
+            })
+
+            var networksGrouped = networks.reduce(function (n, network) {
+                var key = network.latitude + "," + network.longitude
+                n[key] = n[key] || []
+                n[key].push(network)
+                return n
+            }, Object.create(null))
+            
+            var markers = []
+            var mapCenter
+            Object.keys(networksGrouped).forEach(key => {
+                var networks = networksGrouped[key]
+                var coordinates = key.split(",")
+                if(!mapCenter)
+                    mapCenter = coordinates
+                var popupText = ""
+                var popupCounter = 0
+                while(popupCounter < Math.min(networks.length, 7)) {
+                    var network = networks[popupCounter]
+                    if(network.ssid == "")
+                        popupText += "<b>Hidden</b>"
+                    else
+                        popupText += "<b>" + network.ssid + "</b>"
+                    
+                    popupText += " (" + network.mac + ")<br />"
+                    popupCounter++
+                }
+                if(networks.length > popupCounter)
+                    popupText += '&plus;' + (networks.length - popupCounter) + ' more networks'
+                var marker = L.marker([coordinates[0], coordinates[1]], {icon: icon}).bindPopup(popupText)
+                markers.push(marker)
+            })
+
+            ciLayer.addLayers(markers)
         }
         function setupMenuClickListeners() {
             document.getElementById("menu-current-session").addEventListener("click", showCurrentSession)
