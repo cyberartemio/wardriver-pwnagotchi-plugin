@@ -178,7 +178,7 @@ Otherwise, if you have installed the plugin manually just download the new versi
 
 All the operations are done through the plugin's Web UI. Inside of it, you can see the current wardriving session statistics, global statistics (including your WiGLE profile), all networks seen by your pwnagotchi and also plot the networks on map. You can upload automatically the sessions on WiGLE when internet is available, or upload them manually through the Web UI.
 
-You can reach the Web UI by opening `http://<pwnagotchi ip>/plugins/wardriver` in your browser.
+You can reach the Web UI by opening `http://<pwnagotchi ip>:8080/plugins/wardriver` in your browser.
 
 ### 🚗 Wardriving
 
