@@ -203,6 +203,4 @@ If you want to contribute, you can fork the project and then open a pull request
 
 - Rai68's [gpsd-easy](https://github.com/rai68/gpsd-easy) pwnagotchi plugin for the GPSD integration
 
-- Fmtray's [gpsd-ng](https://github.com/fmatray/pwnagotchi_GPSD-ng)
-
 - Jayofelony's [pwndroid](https://github.com/jayofelony/pwnagotchi-torch-plugins/blob/main/pwndroid.py) pwnagotchi plugin for the Pwndroid integration
