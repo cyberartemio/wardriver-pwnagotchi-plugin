@@ -110,7 +110,7 @@ main.plugins.wardriver.gps.method = "bettercap"
 
 #### 🛰️ GPSD
 
-If you are using Rai's [gpsd-easy](https://github.com/rai68/gpsd-easy) or fmtray's [gpsd-ng](https://github.com/fmatray/pwnagotchi_GPSD-ng), pick and use this method. This should be used if you have installed gpsd on your pwnagotchi and if it is running as a daemon.
+If you are using Rai's [gpsd-easy](https://github.com/rai68/gpsd-easy) or fmatray's [gpsd-ng](https://github.com/fmatray/pwnagotchi_GPSD-ng), pick and use this method. This should be used if you have installed gpsd on your pwnagotchi and if it is running as a daemon.
 
 ```toml
 # ...
